@@ -13,11 +13,12 @@ class Mitame {
   static const String outputDirEnv = 'MITAME_OUTPUT_DIR';
   static const String profileEnv = 'MITAME_PROFILE';
   static const String fontsEnv = 'MITAME_FONTS';
+  static const String runIdEnv = 'MITAME_RUN_ID';
   static const String defaultProfile = 'default';
 
   static Future<void> install({
     bool loadFonts = false,
-    bool groupFromGoldenUri = true,
+    bool groupFromGoldenUri = false,
   }) async {
     final current = goldenFileComparator;
     if (current is! LocalFileComparator) {
@@ -41,6 +42,8 @@ class Mitame {
       outputDir: outputDir,
       profile: profile,
       groupFromGoldenUri: groupFromGoldenUri,
+      runId: env[runIdEnv],
+      sdkVersion: _sdkVersion(),
     );
     if (loadFonts && env[fontsEnv] != 'ahem') {
       await loadAppFonts();
@@ -123,6 +126,20 @@ class Mitame {
       }
       await loader.load();
     }
+  }
+
+  static String? _sdkVersion() {
+    final root = Platform.environment['FLUTTER_ROOT'] ?? _rootFromExecutable();
+    if (root == null) {
+      return null;
+    }
+    final file = File([root, 'bin', 'cache', 'flutter.version.json']
+        .join(Platform.pathSeparator));
+    if (!file.existsSync()) {
+      return null;
+    }
+    final data = json.decode(file.readAsStringSync());
+    return data is Map ? data['frameworkVersion'] as String? : null;
   }
 
   static Directory? _materialFontsDir() {

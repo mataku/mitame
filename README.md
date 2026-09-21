@@ -47,7 +47,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 
 `loadFonts: true` loads the fonts declared in the package and the SDK's Roboto, so goldens render real glyphs instead of the Ahem placeholder font. Setting `MITAME_FONTS=ahem` in the environment skips font loading for that run, which renders text as Ahem boxes. Ahem glyphs are wider than real ones and can overflow tight layouts, and packages that load fonts themselves (alchemist does) are unaffected by the switch.
 
-`groupFromGoldenUri: false` drops the golden file's directory from the identity, so `matchesGoldenFile('goldens/login.png')` in `test/ui/auth/` becomes `flutter/ui/auth/login` instead of `flutter/ui/auth/goldens/login`. Two golden directories in the same test directory with the same file names would then collide, which is why the default keeps the directory.
+By default the identity is the test file's directory plus the golden file's stem, so `matchesGoldenFile('goldens/login.png')` in `test/ui/auth/` becomes `flutter/ui/auth/login`. Golden helper packages use fixed directory names such as `goldens/` or `goldens/ci/` that carry no information. If two golden files in one test directory share a stem, the adapter throws a `StateError` naming the identity when both are written in the same `mitame test` run; pass `groupFromGoldenUri: true` to keep the golden directory in the identity instead. The sidecar records the Flutter SDK version and the run id.
 
 ### Cross-platform baselines
 

@@ -12,7 +12,9 @@ class MitameComparator extends GoldenFileComparator {
     required this.testRoot,
     required this.outputDir,
     required this.profile,
-    this.groupFromGoldenUri = true,
+    this.groupFromGoldenUri = false,
+    this.runId,
+    this.sdkVersion,
   });
 
   static const int schemaVersion = 1;
@@ -23,6 +25,8 @@ class MitameComparator extends GoldenFileComparator {
   final Directory outputDir;
   final String profile;
   final bool groupFromGoldenUri;
+  final String? runId;
+  final String? sdkVersion;
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
@@ -39,14 +43,32 @@ class MitameComparator extends GoldenFileComparator {
     final root =
         Directory('${outputDir.path}${Platform.pathSeparator}$profile');
     final pngFile = File(_join(root.path, identity.relativePath));
+    final sidecar = File(_join(root.path, identity.sidecarRelativePath));
+    _checkCollision(identity, sidecar);
     await pngFile.parent.create(recursive: true);
     await pngFile.writeAsBytes(imageBytes, flush: true);
-    final sidecar = File(_join(root.path, identity.sidecarRelativePath));
     await sidecar.writeAsString(
       const JsonEncoder.withIndent('  ')
           .convert(_sidecar(identity, golden, imageBytes)),
       flush: true,
     );
+  }
+
+  void _checkCollision(MitameIdentity identity, File sidecar) {
+    if (runId == null || !sidecar.existsSync()) {
+      return;
+    }
+    final existing = json.decode(sidecar.readAsStringSync());
+    final previous = existing is Map
+        ? (existing['ext'] as Map?)?['flutter']?['run_id']
+        : null;
+    if (previous == runId) {
+      throw StateError(
+        'Two goldens resolved to the same mitame identity "${identity.id}" in this run. '
+        'Use distinct golden file names, or Mitame.install(groupFromGoldenUri: true) '
+        'to keep the golden directory in the identity.',
+      );
+    }
   }
 
   MitameIdentity identityFor(Uri golden) {
@@ -99,6 +121,7 @@ class MitameComparator extends GoldenFileComparator {
       'env': {
         'os': Platform.operatingSystem,
         'arch': _arch(),
+        if (sdkVersion != null) 'sdk': sdkVersion,
         'ci': Platform.environment.containsKey('CI'),
       },
       'captured_at': DateTime.now().toUtc().toIso8601String(),
@@ -106,6 +129,7 @@ class MitameComparator extends GoldenFileComparator {
         'flutter': {
           'golden_uri': golden.toString(),
           'test_dir': _relativeSegments(testRoot, testBasedir).join('/'),
+          if (runId != null) 'run_id': runId,
         },
       },
     };

@@ -18,13 +18,15 @@
   "env": {
     "os": "macos",
     "arch": "aarch64",
+    "sdk": "3.41.6",
     "ci": false
   },
-  "captured_at": "2026-09-21T08:42:47.434556Z",
+  "captured_at": "2026-09-21T12:00:00.979055Z",
   "ext": {
     "flutter": {
       "golden_uri": "login_form__locale=ja,theme=light.png",
-      "test_dir": "login"
+      "test_dir": "login",
+      "run_id": "1789991999684-80307"
     }
   }
 }

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "id": "flutter/login/goldens/login_form",
+  "id": "flutter/login/login_form",
   "platform": "flutter",
   "capture": "widget",
-  "group": "login/goldens",
+  "group": "login",
   "name": "login_form",
   "display_name": "login_form.png",
   "variant": {},
@@ -15,13 +15,15 @@
   "env": {
     "os": "macos",
     "arch": "aarch64",
+    "sdk": "3.41.6",
     "ci": false
   },
-  "captured_at": "2026-09-21T08:42:47.632598Z",
+  "captured_at": "2026-09-21T12:00:01.161830Z",
   "ext": {
     "flutter": {
       "golden_uri": "goldens/login_form.png",
-      "test_dir": "login"
+      "test_dir": "login",
+      "run_id": "1789991999684-80307"
     }
   }
 }
