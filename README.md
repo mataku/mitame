@@ -195,8 +195,8 @@ The contract is capture-agnostic: the Android and iOS adapters were added withou
 - [x] `mitame run -- <command>`: the same wrapper for any capture command
 - [x] skip sidecar copy in `approve` when the PNG is unchanged
 - [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)
-- [ ] GitHub Action to install the binary
-- [ ] Windows builds
+- [ ] GitHub Action to install the binary (`setup/action.yml` in place, unverified until the first release)
+- [ ] Windows builds (in the release matrix, unverified)
 
 ### Integrations
 
@@ -208,7 +208,7 @@ The binary stops at `report/`. Getting the report to reviewers is left to the CI
 
 - [x] `mitame_flutter` adapter depending on `flutter_test` only
 - [x] real fonts via `FontManifest.json` and the SDK's Roboto
-- [ ] publish to pub.dev (needs automated publishing set up on pub.dev)
+- [ ] publish to pub.dev (`publish-flutter.yml` runs on `flutter-v*` tags once automated publishing is enabled for this repository on pub.dev)
 - [x] benchmark against stock `LocalFileComparator` (`mitame-bench`)
 - [ ] adapter for `@Preview`-based capture output
 
@@ -219,7 +219,7 @@ The binary stops at `report/`. Getting the report to reviewers is left to the CI
 - [x] scale recorded from the render (`UIScreen.main.scale`, 3.0 on iPhone 16)
 - [ ] SwiftUI helper (`UIHostingController` wrapper)
 - [ ] size inference when `size:` is omitted (containers report `noIntrinsicMetric` today)
-- [ ] root `Package.swift` so the package can be referenced from this repository's URL
+- [x] root `Package.swift` so the package can be referenced from this repository's URL
 - [ ] full-screen tier through `xcrun simctl io screenshot`
 
 ### Android
@@ -228,19 +228,27 @@ The binary stops at `report/`. Getting the report to reviewers is left to the CI
 - [x] example module verified with Robolectric native graphics, no emulator
 - [x] density recorded as `scale` (3.0 under `xxhdpi`)
 - [ ] Compose helper
-- [ ] publish to Maven Central
+- [ ] publish to Maven Central (`maven-publish` configured; `publishToMavenLocal` works)
 - [ ] instrumented-test tier (device or emulator, files pulled with adb)
 
 ## Install
 
-Prebuilt binaries are published on GitHub Releases for macOS (arm64, x64) and Linux (x64, arm64, statically linked with musl). Pick the archive for your platform:
+Prebuilt binaries are published on GitHub Releases for macOS (arm64, x64), Linux (x64, arm64, statically linked with musl), and Windows (x64). Pick the archive for your platform:
 
 ```sh
 curl -fsSL https://github.com/mataku/mitame/releases/latest/download/mitame-aarch64-apple-darwin.tar.gz | tar xz
 sudo mv mitame-aarch64-apple-darwin/mitame /usr/local/bin/
 ```
 
-Archive names are `mitame-<target>.tar.gz` where `<target>` is one of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`. Each archive has a matching `.sha256` file.
+Archive names are `mitame-<target>.tar.gz` where `<target>` is one of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `x86_64-pc-windows-msvc`. Each archive has a matching `.sha256` file.
+
+On GitHub Actions, the `setup` action in this repository downloads the right archive, verifies its checksum, and adds `mitame` to `PATH`:
+
+```yaml
+- uses: mataku/mitame/setup@v0.1.0
+  with:
+    version: v0.1.0
+```
 
 To build from source instead:
 
@@ -248,7 +256,13 @@ To build from source instead:
 cargo install --git https://github.com/mataku/mitame mitame-cli
 ```
 
-The Android and iOS adapters are not published yet either; copy `adapters/android/mitame` or `adapters/ios/Sources/Mitame` into your project for now (SwiftPM cannot point at a subdirectory of a repository, so a root manifest is on the roadmap). The Flutter adapter is not on pub.dev yet. Until then, reference it as a git dependency:
+The iOS adapter is a Swift package exposed through the repository's root `Package.swift`:
+
+```swift
+.package(url: "https://github.com/mataku/mitame", from: "0.1.0")
+```
+
+The Android adapter is set up for Maven publishing as `io.github.mataku:mitame-android` but is not on Maven Central yet; until then `./gradlew :mitame:publishToMavenLocal` in `adapters/android` installs it into `~/.m2` for `mavenLocal()` consumers. The Flutter adapter is not on pub.dev yet. Until then, reference it as a git dependency:
 
 ```yaml
 dev_dependencies:
@@ -257,6 +271,10 @@ dev_dependencies:
       url: https://github.com/mataku/mitame
       path: adapters/flutter
 ```
+
+## Releasing
+
+Releases are cut by GitHub Actions only. A `v<version>` tag builds the binaries for every target, checks that the tag matches the workspace `Cargo.toml`, `adapters/flutter/pubspec.yaml`, and `adapters/android/mitame/build.gradle.kts`, and publishes the archives with checksums. A `flutter-v<version>` tag publishes `mitame_flutter` to pub.dev through pub.dev's automated publishing (configure the repository and the `flutter-v{{version}}` tag pattern on the package's admin page first). Swift Package Manager consumers use the `v<version>` tag directly.
 
 ## Development
 
