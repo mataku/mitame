@@ -41,6 +41,10 @@ enum Command {
         common: Common,
         ids: Vec<String>,
     },
+    Report {
+        #[command(flatten)]
+        common: Common,
+    },
     Schema {
         #[arg(long, default_value = "schema")]
         out: PathBuf,
@@ -62,35 +66,15 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
     match cli.command {
         Command::Compare { common } => {
             let (config, layout) = resolve(&common)?;
-            let outcome = compare(&config, &layout)?;
-            let s = &outcome.result.summary;
-            println!(
-                "profile {}: unchanged {}, changed {}, added {}, removed {}, mismatch {}, error {}",
-                layout.profile, s.unchanged, s.changed, s.added, s.removed, s.mismatch, s.error
-            );
-            for entry in &outcome.result.results {
-                if entry.status != mitame_contract::Status::Unchanged {
-                    let detail = entry
-                        .message
-                        .clone()
-                        .or_else(|| entry.diff_ratio.map(|r| format!("diff_ratio {r:.4}")))
-                        .unwrap_or_default();
-                    println!(
-                        "  {:<9} {} {}",
-                        format!("{:?}", entry.status).to_lowercase(),
-                        entry.id,
-                        detail
-                    );
-                }
-            }
-            println!("report: {}", layout.result_path().display());
-            Ok(if outcome.errored {
-                EXIT_ERROR
-            } else if outcome.failed {
-                EXIT_DIFF
-            } else {
-                EXIT_OK
-            })
+            run_compare(&config, &layout)
+        }
+        Command::Report { common } => {
+            let (_, layout) = resolve(&common)?;
+            let text = std::fs::read_to_string(layout.result_path())?;
+            let result: ResultFile = serde_json::from_str(&text)?;
+            let path = mitame_core::write_html(&layout, &result)?;
+            println!("report: {}", path.display());
+            Ok(EXIT_OK)
         }
         Command::Approve { common, ids } => {
             let (_, layout) = resolve(&common)?;
@@ -120,6 +104,41 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             Ok(EXIT_OK)
         }
     }
+}
+
+fn run_compare(config: &Config, layout: &Layout) -> Result<u8, Box<dyn std::error::Error>> {
+    let outcome = compare(config, layout)?;
+    let s = &outcome.result.summary;
+    println!(
+        "profile {}: unchanged {}, changed {}, added {}, removed {}, mismatch {}, error {}",
+        layout.profile, s.unchanged, s.changed, s.added, s.removed, s.mismatch, s.error
+    );
+    for entry in &outcome.result.results {
+        if entry.status != mitame_contract::Status::Unchanged {
+            let detail = entry
+                .message
+                .clone()
+                .or_else(|| entry.diff_ratio.map(|r| format!("diff_ratio {r:.4}")))
+                .unwrap_or_default();
+            println!(
+                "  {:<9} {} {}",
+                format!("{:?}", entry.status).to_lowercase(),
+                entry.id,
+                detail
+            );
+        }
+    }
+    println!(
+        "report: {}",
+        layout.report_dir().join("index.html").display()
+    );
+    Ok(if outcome.errored {
+        EXIT_ERROR
+    } else if outcome.failed {
+        EXIT_DIFF
+    } else {
+        EXIT_OK
+    })
 }
 
 fn resolve(common: &Common) -> Result<(Config, Layout), Box<dyn std::error::Error>> {

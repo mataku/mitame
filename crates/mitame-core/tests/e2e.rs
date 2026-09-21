@@ -236,3 +236,22 @@ fn sidecar_id_mismatch_is_error() {
     assert_eq!(entry.status, Status::Error);
     assert!(entry.message.as_deref().unwrap().contains("does not match"));
 }
+
+#[test]
+fn compare_writes_html_report() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    write_png(
+        &layout.root.join("current/default/flutter/a/x.png"),
+        4,
+        4,
+        [0, 0, 0, 255],
+        &[],
+    );
+    compare(&Config::default(), &layout).unwrap();
+    let html = fs::read_to_string(layout.root.join("report/index.html")).unwrap();
+    assert!(html.contains("flutter/a/x"));
+    assert!(html.contains("src=\"current/flutter/a/x.png\""));
+    assert!(layout.root.join("report/current/flutter/a/x.png").exists());
+    assert!(!layout.root.join("report/baseline/flutter/a/x.png").exists());
+}

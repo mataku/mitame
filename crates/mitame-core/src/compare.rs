@@ -20,11 +20,11 @@ pub struct CompareOutcome {
 pub fn compare(config: &Config, layout: &Layout) -> Result<CompareOutcome> {
     let matchers = config.matchers()?;
     let identities: Vec<Identity> = layout.identities()?.into_iter().collect();
-    let diff_dir = layout.diff_dir();
-    if diff_dir.exists() {
-        fs::remove_dir_all(&diff_dir).map_err(|e| Error::io(&diff_dir, e))?;
+    let report_dir = layout.report_dir();
+    if report_dir.exists() {
+        fs::remove_dir_all(&report_dir).map_err(|e| Error::io(&report_dir, e))?;
     }
-    fs::create_dir_all(layout.report_dir()).map_err(|e| Error::io(layout.report_dir(), e))?;
+    fs::create_dir_all(&report_dir).map_err(|e| Error::io(&report_dir, e))?;
 
     let entries: Vec<Entry> = identities
         .par_iter()
@@ -54,6 +54,7 @@ pub fn compare(config: &Config, layout: &Layout) -> Result<CompareOutcome> {
         source: e,
     })?;
     fs::write(layout.result_path(), json).map_err(|e| Error::io(layout.result_path(), e))?;
+    crate::report::write_html(layout, &result)?;
     Ok(CompareOutcome {
         result,
         failed,
