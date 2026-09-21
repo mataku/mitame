@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "mitame-android"
 
-include(":mitame", ":example")
+include(":mitame", ":mitame-compose", ":example")

@@ -2,10 +2,11 @@ package io.github.mataku.mitame
 
 internal object Identity {
     private val camelBoundary = Regex("([a-z0-9])([A-Z])")
+    private val acronymBoundary = Regex("([A-Z])([A-Z][a-z])")
     private val unsafe = Regex("[^a-z0-9_.-]")
 
     fun normalize(raw: String): String {
-        var value = raw.replace(camelBoundary, "$1_$2").lowercase().replace(unsafe, "_")
+        var value = raw.replace(camelBoundary, "$1_$2").replace(acronymBoundary, "$1_$2").lowercase().replace(unsafe, "_")
         while (value.contains("__")) {
             value = value.replace("__", "_")
         }

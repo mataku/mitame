@@ -14,7 +14,7 @@ object Mitame {
     const val PLATFORM = "android"
     const val SCHEMA_VERSION = 1
 
-    private const val ADAPTER_PACKAGE = "io.github.mataku.mitame"
+    private val ADAPTER_PACKAGES = setOf("io.github.mataku.mitame", "io.github.mataku.mitame.compose")
 
     private val FRAMEWORK_PREFIXES = listOf(
         "java.", "javax.", "jdk.", "sun.", "kotlin.", "kotlinx.",
@@ -102,10 +102,10 @@ object Mitame {
         }
     }
 
-    private fun callerGroup(): String {
+    fun callerGroup(): String {
         val frame = Throwable().stackTrace.firstOrNull { frame ->
             val cls = frame.className
-            cls.substringBeforeLast('.') != ADAPTER_PACKAGE && FRAMEWORK_PREFIXES.none { cls.startsWith(it) }
+            cls.substringBeforeLast('.') !in ADAPTER_PACKAGES && FRAMEWORK_PREFIXES.none { cls.startsWith(it) }
         } ?: return "_"
         return frame.className.substringAfterLast('.').substringBefore('$')
     }

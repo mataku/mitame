@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "android/login_form_compose_test/login_form_compose__theme=light",
+  "platform": "android",
+  "capture": "widget",
+  "group": "login_form_compose_test",
+  "name": "login_form_compose",
+  "display_name": "login_form_compose",
+  "variant": {
+    "theme": "light"
+  },
+  "image": {
+    "width": 1080,
+    "height": 829,
+    "scale": 3.0
+  },
+  "env": {
+    "os": "android",
+    "sdk": "35",
+    "device": "robolectric",
+    "renderer": "robolectric",
+    "ci": false
+  },
+  "captured_at": "2026-09-21T13:42:13.194842Z",
+  "ext": {
+    "android": {}
+  }
+}
