@@ -1,10 +1,13 @@
 # Configuration
 
-`mitame init` writes a `mitame.toml` with the defaults into the current directory (it refuses to overwrite one unless `--force` is passed). All keys are optional:
+`mitame init` writes a `mitame.toml` with the defaults and the test command detected from the project (`flutter test` next to a `pubspec.yaml`, `./gradlew test --rerun` next to a Gradle settings file) into the current directory; it refuses to overwrite one unless `--force` is passed. All keys are optional:
 
 ```toml
 [paths]
 root = ".mitame"
+
+[capture]
+command = ["flutter", "test"]   # run by `mitame capture` and `mitame run`; arguments after `--` are appended
 
 [compare]
 threshold = 0.0            # allowed diff ratio (differing pixels / total pixels)

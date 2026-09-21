@@ -9,10 +9,10 @@ The reliable setup is therefore one baseline per rendering platform, selected by
 ```sh
 nerdctl run --rm -v "$PWD:/work" -w /work -e MITAME_PROFILE=linux \
   ghcr.io/cirruslabs/flutter:3.41.6 sh -c 'flutter pub get && flutter test'
-mitame approve --profile linux
+mitame compare --update --profile linux
 ```
 
-Delete `.dart_tool/` before switching between the container and the host, since `flutter pub get` writes absolute SDK paths into it. The `linux` baseline is committed like any other file; it can equally be produced by running the same commands plus `mitame approve --profile linux` in a workflow and committing the result.
+Delete `.dart_tool/` before switching between the container and the host, since `flutter pub get` writes absolute SDK paths into it. The `linux` baseline is committed like any other file; it can equally be produced by running the same commands plus `mitame compare --update --profile linux` in a workflow and committing the result.
 
 ## Workflow
 

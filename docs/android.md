@@ -29,10 +29,10 @@ fun loginFormCompose() {
 }
 ```
 
-The group defaults to the test class name in snake case (`login_form_test`, with acronyms split as in `login_form_ui_test`); pass `group =` to override. The sidecar records the density as `scale`, the API level as `env.sdk`, and `robolectric` as the renderer when it detects it. Gradle test workers inherit the environment, so `MITAME_OUTPUT_DIR` and `MITAME_PROFILE` work as they do for Flutter; the example's build script defaults the output directory to the repository root (keeping an inherited `MITAME_OUTPUT_DIR` when one is set) because a Gradle module's working directory is the module itself. Gradle skips a test task whose inputs did not change, so capture with `--rerun`:
+The group defaults to the test class name in snake case (`login_form_test`, with acronyms split as in `login_form_ui_test`); pass `group =` to override. The sidecar records the density as `scale`, the API level as `env.sdk`, and `robolectric` as the renderer when it detects it. Gradle test workers inherit the environment, so `MITAME_OUTPUT_DIR` and `MITAME_PROFILE` work as they do for Flutter; the example's build script defaults the output directory to the repository root (keeping an inherited `MITAME_OUTPUT_DIR` when one is set) because a Gradle module's working directory is the module itself. Gradle skips a test task whose inputs did not change, so the capture command carries `--rerun`; the example's `mitame.toml` sets it, so `mitame run` alone is enough:
 
 ```sh
-mitame run -- ./gradlew :example:testDebugUnitTest --rerun
+mitame run    # [capture] command = ["./gradlew", ":example:testDebugUnitTest", "--rerun"]
 ```
 
 See also the [Android example](../adapters/android/example/README.md).

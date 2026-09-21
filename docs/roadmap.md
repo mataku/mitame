@@ -3,12 +3,12 @@
 ## CLI
 
 - [x] `compare` with byte-equality shortcut, pixel tolerance, dimension and scale checks
-- [x] `approve` for all or selected identities
+- [x] `compare --update` writes changed and added screenshots into the baseline from the comparison result; `--prune` deletes removed ones
 - [x] `result.json` and diff images
 - [x] HTML report with viewer (zoom, onion-skin overlay, keyboard navigation) and id filter
 - [x] anti-aliasing detection
-- [x] `mitame test` and `mitame run -- <command>`
-- [x] skip sidecar copy in `approve` when the PNG is unchanged
+- [x] `mitame capture` and `mitame run` around the test command from `mitame.toml`
+- [x] `--update` leaves screenshots that are unchanged within the tolerance alone, so the baseline diff shows only real changes
 - [x] `mitame init` and project root discovery from subdirectories
 - [x] sidecar `schema_version` check and `mitame_version` in `result.json`
 - [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)

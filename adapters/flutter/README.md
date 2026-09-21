@@ -2,7 +2,7 @@
 
 Capture adapter for [mitame](https://github.com/mataku/mitame), a visual regression testing tool with a single Rust binary for comparison, reporting, and baseline approval.
 
-This package depends on `flutter_test` only. It replaces `goldenFileComparator` so that every existing `matchesGoldenFile` call writes its PNG (and a JSON sidecar) into `.mitame/current/` instead of comparing in the test process. `mitame compare` then does the comparison once per suite with per-pixel tolerance and anti-aliasing detection, writes an HTML report, and `mitame approve` promotes accepted screenshots into `.mitame/baseline/`.
+This package depends on `flutter_test` only. It replaces `goldenFileComparator` so that every existing `matchesGoldenFile` call writes its PNG (and a JSON sidecar) into `.mitame/current/` instead of comparing in the test process. `mitame compare` then does the comparison once per suite with per-pixel tolerance and anti-aliasing detection, writes an HTML report, and `mitame compare --update` writes accepted screenshots into `.mitame/baseline/`.
 
 ## Setup
 
@@ -18,7 +18,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 }
 ```
 
-Then run `mitame test` (or `flutter test` followed by `mitame compare`). See the repository README for the binary, configuration, profiles, and CI usage.
+Then run `mitame run` (or `flutter test` followed by `mitame compare`). See the repository README for the binary, configuration, profiles, and CI usage.
 
 ## API
 

@@ -11,9 +11,9 @@ What to copy:
 Run from `adapters/android`:
 
 ```sh
-../../target/debug/mitame run -- ./gradlew :example:testDebugUnitTest --rerun
+../../target/debug/mitame run                 # [capture] command comes from adapters/android/mitame.toml
 open .mitame/report/index.html
-../../target/debug/mitame approve
+../../target/debug/mitame compare --update
 ```
 
 `--rerun` matters: Gradle skips the test task when nothing changed, and a skipped task captures nothing.

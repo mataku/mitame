@@ -12,7 +12,7 @@ XCTest only sees environment variables that xcodebuild received with a `TEST_RUN
 ```sh
 ../../target/debug/mitame run -- xcodebuild test -scheme Mitame -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.3.1'
 open .mitame/report/index.html
-../../target/debug/mitame approve
+../../target/debug/mitame compare --update
 ```
 
 Use `xcodebuild -showdestinations -scheme Mitame` to pick a simulator name and OS that exist on your machine. The committed baseline was rendered on an iPhone 16 simulator running iOS 18.3.1; other simulators or OS versions render slightly differently and belong in their own profile.
