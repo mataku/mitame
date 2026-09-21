@@ -51,11 +51,7 @@ document.querySelectorAll('.summary a').forEach(function (a) {
 pub fn write_html(layout: &Layout, result: &ResultFile) -> Result<PathBuf> {
     let report_dir = layout.report_dir();
     fs::create_dir_all(&report_dir).map_err(|e| Error::io(&report_dir, e))?;
-    for entry in result
-        .results
-        .iter()
-        .filter(|e| e.status != Status::Unchanged)
-    {
+    for entry in result.results.iter().filter(|e| shows_images(e)) {
         for (side, path) in [("baseline", &entry.baseline), ("current", &entry.current)] {
             if let Some(rel) = path {
                 let src = layout.root.join(rel);
@@ -73,7 +69,44 @@ pub fn write_html(layout: &Layout, result: &ResultFile) -> Result<PathBuf> {
     Ok(path)
 }
 
+fn shows_images(entry: &Entry) -> bool {
+    entry.status != Status::Unchanged || entry.diff_pixels.unwrap_or(0) > 0
+}
+
 pub fn render(result: &ResultFile) -> String {
+    render_at(result, &timestamp())
+}
+
+fn timestamp() -> String {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let days = secs / 86_400;
+    let rem = secs % 86_400;
+    let (y, m, d) = civil_from_days(days as i64);
+    format!(
+        "{y:04}-{m:02}-{d:02} {:02}:{:02}:{:02} UTC",
+        rem / 3600,
+        (rem % 3600) / 60,
+        rem % 60
+    )
+}
+
+fn civil_from_days(z: i64) -> (i64, u32, u32) {
+    let z = z + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+pub fn render_at(result: &ResultFile, generated_at: &str) -> String {
     let mut out = String::new();
     let s = &result.summary;
     let _ = write!(
@@ -82,9 +115,10 @@ pub fn render(result: &ResultFile) -> String {
     );
     let _ = write!(
         out,
-        "<h1>mitame report</h1><div class=\"meta\">profile <code>{}</code> · {} screenshots</div>",
+        "<h1>mitame report</h1><div class=\"meta\">profile <code>{}</code> · {} screenshots · generated {}</div>",
         escape(&result.profile),
-        result.results.len()
+        result.results.len(),
+        escape(generated_at)
     );
     out.push_str("<nav class=\"summary\">");
     for (status, count) in [
@@ -96,11 +130,13 @@ pub fn render(result: &ResultFile) -> String {
         (Status::Unchanged, s.unchanged),
     ] {
         let name = status_name(status);
-        let off = if status == Status::Unchanged && count > 0 {
-            " class=\"off\""
-        } else {
-            ""
-        };
+        let all_hidden = status == Status::Unchanged
+            && count > 0
+            && result
+                .results
+                .iter()
+                .all(|e| e.status != Status::Unchanged || e.diff_pixels.unwrap_or(0) == 0);
+        let off = if all_hidden { " class=\"off\"" } else { "" };
         let _ = write!(
             out,
             "<a href=\"#{name}\" data-status=\"{name}\"{off}><b>{count}</b>{name}</a>"
@@ -116,7 +152,7 @@ pub fn render(result: &ResultFile) -> String {
         Status::Error,
         Status::Unchanged,
     ] {
-        let entries: Vec<&Entry> = result
+        let mut entries: Vec<&Entry> = result
             .results
             .iter()
             .filter(|e| e.status == status)
@@ -124,6 +160,12 @@ pub fn render(result: &ResultFile) -> String {
         if entries.is_empty() {
             continue;
         }
+        entries.sort_by(|a, b| {
+            b.diff_pixels
+                .unwrap_or(0)
+                .cmp(&a.diff_pixels.unwrap_or(0))
+                .then_with(|| a.id.cmp(&b.id))
+        });
         let name = status_name(status);
         let _ = write!(
             out,
@@ -141,7 +183,7 @@ pub fn render(result: &ResultFile) -> String {
 
 fn render_entry(out: &mut String, entry: &Entry) {
     let name = status_name(entry.status);
-    let hidden = if entry.status == Status::Unchanged {
+    let hidden = if entry.status == Status::Unchanged && entry.diff_pixels.unwrap_or(0) == 0 {
         " hidden"
     } else {
         ""
@@ -152,19 +194,17 @@ fn render_entry(out: &mut String, entry: &Entry) {
         escape(&entry.id)
     );
     if let (Some(ratio), Some(pixels)) = (entry.diff_ratio, entry.diff_pixels) {
-        if entry.status == Status::Changed {
-            let _ = write!(
-                out,
-                "<span class=\"detail\">{:.2}% · {pixels} px</span>",
-                ratio * 100.0
-            );
-        }
+        let _ = write!(
+            out,
+            "<span class=\"detail\">{:.3}% · {pixels} px</span>",
+            ratio * 100.0
+        );
     }
     if let Some(msg) = &entry.message {
         let _ = write!(out, "<span class=\"detail\">{}</span>", escape(msg));
     }
     out.push_str("</header>");
-    if entry.status != Status::Unchanged {
+    if shows_images(entry) {
         out.push_str("<div class=\"images\">");
         let copied = |side: &str| format!("{side}/{}.png", entry.id);
         let images = [
@@ -265,7 +305,8 @@ mod tests {
         assert!(html.contains("src=\"current/flutter/a/x__theme=dark.png\""));
         assert!(!html.contains("../"));
         assert!(html.contains("src=\"diff/flutter/a/x__theme=dark.png\""));
-        assert!(html.contains("25.00% · 4 px"));
+        assert!(html.contains("25.000% · 4 px"));
+        assert!(html.contains("0.000% · 0 px"));
         assert!(html.contains("flutter/a/&lt;y&gt;"));
         assert!(!html.contains("<y>"));
     }

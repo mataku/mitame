@@ -155,6 +155,20 @@ fn compare_classifies_and_approve_promotes() {
         status_of(&layout, &lenient, "flutter/a/tiny__theme=dark"),
         Status::Unchanged
     );
+    assert!(layout
+        .root
+        .join("report/diff/flutter/a/tiny__theme=dark.png")
+        .exists());
+    assert!(layout
+        .root
+        .join("report/current/flutter/a/tiny__theme=dark.png")
+        .exists());
+    assert!(!layout
+        .root
+        .join("report/current/flutter/a/same.png")
+        .exists());
+    let html = fs::read_to_string(layout.root.join("report/index.html")).unwrap();
+    assert!(html.contains("0.200% · 20 px"));
 
     let approved = approve(&layout, &[]).unwrap();
     assert_eq!(approved.copied.len(), 4);
