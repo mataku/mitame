@@ -1,0 +1,14 @@
+name: mitame_flutter
+description: Capture adapter for mitame. Writes golden images into the mitame layout instead of comparing them.
+version: 0.1.0
+repository: https://github.com/mataku/mitame
+
+environment:
+  sdk: ^3.6.0
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter

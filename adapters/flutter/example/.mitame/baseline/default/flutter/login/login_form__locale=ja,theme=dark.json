@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "flutter/login/login_form__locale=ja,theme=dark",
+  "platform": "flutter",
+  "capture": "widget",
+  "group": "login",
+  "name": "login_form",
+  "display_name": "login_form__locale=ja,theme=dark.png",
+  "variant": {
+    "locale": "ja",
+    "theme": "dark"
+  },
+  "image": {
+    "width": 800,
+    "height": 600,
+    "scale": 1.0
+  },
+  "env": {
+    "os": "macos",
+    "arch": "aarch64",
+    "ci": false
+  },
+  "captured_at": "2026-09-21T08:42:47.517373Z",
+  "ext": {
+    "flutter": {
+      "golden_uri": "login_form__locale=ja,theme=dark.png",
+      "test_dir": "login"
+    }
+  }
+}
