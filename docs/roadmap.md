@@ -10,6 +10,7 @@
 - [x] `mitame capture` and `mitame run` around the test command from `mitame.toml`
 - [x] `--update` leaves screenshots that are unchanged within the tolerance alone, so the baseline diff shows only real changes
 - [x] `mitame init` and project root discovery from subdirectories
+- [x] `mitame review [id]` opens the report in the browser
 - [x] sidecar `schema_version` check and `mitame_version` in `result.json`
 - [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)
 - [ ] Windows builds (in the release matrix, unverified)

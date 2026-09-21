@@ -29,7 +29,7 @@ cd adapters/ios && ../../target/debug/mitame run -- xcodebuild test -scheme Mita
 - `mitame capture` and `mitame run` clear `.mitame/current/<profile>/` before running the test command from `[capture] command` in `mitame.toml` (the Flutter and Android examples ship one; iOS passes the command after `--`). If you call `flutter test`, Gradle, or xcodebuild directly, delete that directory first or stale captures will be compared.
 - Gradle skips an up-to-date test task, so the capture command always carries `--rerun`.
 - xcodebuild forwards environment variables to tests only with a `TEST_RUNNER_` prefix; `mitame run` sets both forms. A simulator name that exists for several OS versions must be qualified with `OS=`; `xcodebuild -showdestinations -scheme Mitame` lists valid ones.
-- A change to the report is verified by rendering it: run the Flutter example with a visible change (edit the title in `lib/login_form.dart`), open `.mitame/report/index.html`, and read the diff image. Do not report report changes as done from unit tests alone.
+- A change to the report is verified by rendering it: run the Flutter example with a visible change (edit the title in `lib/login_form.dart`), open the report with `mitame review`, and read the diff image. Do not report report changes as done from unit tests alone.
 - Every example must pass its gate before docs are updated: files land at the documented identity, the sidecar `id` matches the path, `run --update` then `run` exits 0, and a visible change exits 1.
 
 ## Conventions

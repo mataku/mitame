@@ -78,7 +78,7 @@ Run, review, update:
 ```sh
 mitame init             # writes mitame.toml with [capture] command = ["flutter", "test"]
 mitame run              # capture, then compare; exit 0 clean, 1 differences, 2 error
-open .mitame/report/index.html
+mitame review           # open the report in the browser; `mitame review <id>` jumps to one screenshot
 mitame compare --update # write the changed and added screenshots into .mitame/baseline/, then review the git diff
 ```
 

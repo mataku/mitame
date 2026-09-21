@@ -60,10 +60,11 @@ enum Command {
         #[command(flatten)]
         update: UpdateArgs,
     },
-    #[command(about = "Rewrite the HTML report from an existing result.json")]
-    Report {
+    #[command(about = "Open the report in the browser, at one screenshot when an id is given")]
+    Review {
         #[command(flatten)]
         common: Common,
+        id: Option<String>,
     },
     #[command(about = "Write the JSON schemas for the sidecar and result.json")]
     Schema {
@@ -146,12 +147,30 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             let code = run_compare(&config, &layout, &update)?;
             Ok(if ok { code } else { EXIT_ERROR })
         }
-        Command::Report { common } => {
+        Command::Review { common, id } => {
             let (_, layout, _) = resolve(&common)?;
-            let text = std::fs::read_to_string(layout.result_path())?;
+            let result_path = layout.result_path();
+            if !result_path.exists() {
+                return Err(format!(
+                    "no report at {}; run `mitame compare` or `mitame run` first",
+                    result_path.display()
+                )
+                .into());
+            }
+            let text = std::fs::read_to_string(&result_path)?;
             let result: ResultFile = serde_json::from_str(&text)?;
-            let path = mitame_core::write_html(&layout, &result)?;
-            println!("report: {}", path.display());
+            if let Some(id) = &id {
+                if !result.results.iter().any(|e| &e.id == id) {
+                    return Err(format!("no screenshot `{id}` in the last report").into());
+                }
+            }
+            let html = layout.report_dir().join("index.html");
+            if !html.exists() {
+                mitame_core::write_html(&layout, &result)?;
+            }
+            let url = file_url(&std::path::absolute(&html)?, id.as_deref());
+            println!("opening {url}");
+            open_in_browser(&url)?;
             Ok(EXIT_OK)
         }
         Command::Schema { out } => {
@@ -170,6 +189,46 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             Ok(EXIT_OK)
         }
     }
+}
+
+fn file_url(path: &Path, id: Option<&str>) -> String {
+    let mut url = String::from("file://");
+    for byte in path.to_string_lossy().replace('\\', "/").bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' | b':' => {
+                url.push(byte as char)
+            }
+            _ => url.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    if let Some(id) = id {
+        url.push_str("#view=");
+        url.push_str(id);
+    }
+    url
+}
+
+fn open_in_browser(url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut command = if cfg!(target_os = "macos") {
+        let mut c = std::process::Command::new("open");
+        c.arg(url);
+        c
+    } else if cfg!(target_os = "windows") {
+        let mut c = std::process::Command::new("cmd");
+        c.args(["/C", "start", "", url]);
+        c
+    } else {
+        let mut c = std::process::Command::new("xdg-open");
+        c.arg(url);
+        c
+    };
+    let status = command
+        .status()
+        .map_err(|e| format!("failed to open the browser: {e}"))?;
+    if !status.success() {
+        return Err(format!("the browser opener exited with {status}").into());
+    }
+    Ok(())
 }
 
 fn build_command(
@@ -444,6 +503,18 @@ mod tests {
         assert_eq!(
             detect_capture_command(dir.path()),
             Some(vec!["flutter", "test"])
+        );
+    }
+
+    #[test]
+    fn file_url_escapes_the_path_and_keeps_the_fragment() {
+        assert_eq!(
+            file_url(Path::new("/p q/.mitame/report/index.html"), None),
+            "file:///p%20q/.mitame/report/index.html"
+        );
+        assert_eq!(
+            file_url(Path::new("/p/index.html"), Some("flutter/a/x__theme=dark")),
+            "file:///p/index.html#view=flutter/a/x__theme=dark"
         );
     }
 
