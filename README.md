@@ -102,13 +102,15 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [ ] `mitame test`: run `flutter test` then `compare` in one command for local feedback
 - [ ] skip sidecar copy in `approve` when the PNG is unchanged
 - [ ] remote baseline storage (S3 / GCS) and PR comments
-- [ ] prebuilt binaries on GitHub Releases and a GitHub Action
+- [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)
+- [ ] GitHub Action to install the binary
+- [ ] Windows builds
 
 ### Flutter
 
 - [x] `mitame_flutter` adapter depending on `flutter_test` only
 - [x] real fonts via `FontManifest.json` and the SDK's Roboto
-- [ ] publish to pub.dev
+- [ ] publish to pub.dev (needs automated publishing set up on pub.dev)
 - [ ] benchmark against stock `LocalFileComparator`
 - [ ] adapter for `@Preview`-based capture output
 
@@ -127,6 +129,33 @@ Not started. Planned as a Robolectric or instrumented-test shim that renders a V
 - [ ] Robolectric shim writing PNG and sidecar
 - [ ] example project
 - [ ] density handling (`mdpi` … `xxxhdpi`)
+
+## Install
+
+Prebuilt binaries are published on GitHub Releases for macOS (arm64, x64) and Linux (x64, arm64, statically linked with musl). Pick the archive for your platform:
+
+```sh
+curl -fsSL https://github.com/mataku/mitame/releases/latest/download/mitame-aarch64-apple-darwin.tar.gz | tar xz
+sudo mv mitame-aarch64-apple-darwin/mitame /usr/local/bin/
+```
+
+Archive names are `mitame-<target>.tar.gz` where `<target>` is one of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`. Each archive has a matching `.sha256` file.
+
+To build from source instead:
+
+```sh
+cargo install --git https://github.com/mataku/mitame mitame-cli
+```
+
+The Flutter adapter is not on pub.dev yet. Until then, reference it as a git dependency:
+
+```yaml
+dev_dependencies:
+  mitame_flutter:
+    git:
+      url: https://github.com/mataku/mitame
+      path: adapters/flutter
+```
 
 ## Development
 
