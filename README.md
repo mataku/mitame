@@ -1,6 +1,6 @@
 # mitame
 
-Visual regression testing for Flutter. A single Rust binary compares screenshots against a committed baseline, produces diff images and a machine-readable result, and manages baseline approval. A thin capture adapter writes PNG files into a fixed layout and nothing else.
+Visual regression testing for Flutter, with early capture adapters for Android (Robolectric) and iOS (XCTest). A single Rust binary compares screenshots against a committed baseline, produces diff images and a machine-readable result, and manages baseline approval. Thin per-platform capture adapters write PNG files into a fixed layout and nothing else, so one report covers every platform.
 
 The Flutter adapter depends on `flutter_test` from the SDK and on no third-party package. It replaces the golden file comparator so that existing `matchesGoldenFile` calls become the capture step. The test process never fails on a visual difference; `mitame compare` does, once per suite, in parallel.
 
@@ -16,7 +16,7 @@ Flutter already has golden tests, and there are Dart packages that build on them
 
 ## Status
 
-Early development. The end-to-end slice works for Flutter: capture from `flutter test`, `mitame compare` with an HTML report, `mitame approve`, and the `mitame test` wrapper. See [Roadmap](#roadmap) for what is not built yet.
+Early development. The end-to-end slice works for Flutter: capture from `flutter test`, `mitame compare` with an HTML report, `mitame approve`, and the `mitame test` wrapper. Android and iOS have capture adapters with example projects that pass the same flow, but they are new and not yet published as packages. See [Roadmap](#roadmap) for what is not built yet.
 
 ## Layout
 
@@ -29,7 +29,7 @@ Early development. The end-to-end slice works for Flutter: capture from `flutter
 
 The identity of a screenshot is `<platform>/<group>/<name>[__<variant>]`. Variants are `key=value` pairs, sorted by key and joined with `,`. Every component is restricted to `[a-z0-9_.-]`. The optional JSON sidecar next to each PNG carries descriptive metadata; its schema is in `schema/sidecar.schema.json`, and the schema of `report/result.json` is in `schema/result.schema.json`.
 
-Adapters read four environment variables: `MITAME_OUTPUT_DIR` (default `<cwd>/.mitame/current`), `MITAME_PROFILE` (default `default`), `MITAME_FONTS` (`ahem` skips font loading), and `MITAME_RUN_ID` (set by `mitame test`, used to detect identity collisions within a run). Profiles separate baselines that differ systematically, such as macOS and Linux font rasterization.
+Adapters read four environment variables: `MITAME_OUTPUT_DIR` (default `<cwd>/.mitame/current`), `MITAME_PROFILE` (default `default`), `MITAME_FONTS` (Flutter only; `ahem` skips font loading), and `MITAME_RUN_ID` (set by `mitame run` and `mitame test`, used to detect identity collisions within a run). Profiles separate baselines that differ systematically, such as macOS and Linux font rasterization.
 
 ## Flutter
 
@@ -79,7 +79,7 @@ A minimal GitHub Actions job captures with the `linux` profile, compares, and up
     path: .mitame/report
 ```
 
-`compare` exits 1 when anything changed, which fails the job; the uploaded `report/` opens as a standalone page. Local runs keep using the `default` profile and never compare against the Linux baseline.
+`compare` exits 1 when anything changed, which fails the job; the uploaded `report/` opens as a standalone page. Local runs keep using the `default` profile and never compare against the Linux baseline. This repository's `ci.yml` runs the same shape for the Android example (Robolectric on `ubuntu-latest`, profile `linux`) and the iOS example (simulator on `macos-latest`, profile `ci-macos`); with no committed baseline for those profiles they report every screenshot as `added`, which validates the pipeline without guarding regressions.
 
 ```dart
 for (final variant in Mitame.matrix({'theme': ['light', 'dark'], 'locale': ['ja', 'en']})) {
@@ -100,6 +100,56 @@ mitame approve      # promote current into baseline
 Once the adapter is installed, `flutter test --update-goldens` also writes into `.mitame/current/` instead of the golden files next to the tests. Existing goldens can be moved into the baseline by copying: the adapter writes exactly the bytes stock `flutter_test` would have written.
 
 `mitame test [flutter test args]` runs both steps in one command for local feedback: it sets the output directory and profile, runs `flutter test`, then compares. mitame's own flags such as `--profile` go before the `flutter test` arguments. The Flutter binary is `--flutter <path>`, then `MITAME_FLUTTER`, then the version named in `.fvmrc` if it exists under the fvm cache (`FVM_CACHE_PATH` or `~/fvm`), then `.fvm/flutter_sdk/bin/flutter`, then `flutter` on `PATH`; the chosen path is printed as `using …`. Before running, `mitame test` clears `.mitame/current/<profile>/` so that captures from an earlier run cannot show up as this run's results; pass `--keep-current` to keep them, for example when running a subset of test files, in which case the tests that did not run appear as `removed` (a warning by default). When a test fails, the comparison still runs on the captures that succeeded and the report is written, but the exit code is 2. If you run `flutter test` directly instead, delete `.mitame/current/` first so captures from an earlier run are not compared as this run's. `compare` writes `.mitame/report/index.html` alongside `result.json`. The report directory is self-contained (it holds copies of the baseline and current images it shows), so uploading `.mitame/report/` as a CI artifact is enough to review a run. Every entry shows its pixel count, capture time, and, when any pixel differs, the three images with the differing region outlined on the diff. Clicking an image opens a viewer that switches between baseline, current, diff, and an onion-skin overlay with adjustable opacity, zooms to 100% or 200%, steps through entries with the arrow keys, and can be linked to directly with `index.html#view=<id>`. The search box filters entries by id. `mitame report` regenerates the HTML from an existing `result.json`.
+
+## Android
+
+`adapters/android/mitame` is an Android library that depends on the Android SDK only. It takes a `View` or a `Bitmap` and writes the PNG and sidecar; how the bitmap is produced is the project's choice. The example module renders with Robolectric's native graphics, which needs no emulator, but Paparazzi or an instrumented test can hand `Mitame.write` a bitmap just the same.
+
+```kotlin
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [35], qualifiers = "w360dp-h640dp-xxhdpi")
+class LoginFormTest {
+    @Test
+    fun loginForm() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val view = LoginFormView(context)
+        Mitame.capture(view, "login_form", mapOf("theme" to "light"), widthPx = 1080, heightPx = 720)
+    }
+}
+```
+
+The group defaults to the test class name in snake case (`login_form_test`); pass `group =` to override. The sidecar records the density as `scale`, the API level as `env.sdk`, and `robolectric` as the renderer when it detects it. Gradle test workers inherit the environment, so `MITAME_OUTPUT_DIR` and `MITAME_PROFILE` work as they do for Flutter; the example's build script defaults the output directory to the repository root (keeping an inherited `MITAME_OUTPUT_DIR` when one is set) because a Gradle module's working directory is the module itself. Gradle skips a test task whose inputs did not change, so capture with `--rerun`:
+
+```sh
+mitame run -- ./gradlew :example:testDebugUnitTest --rerun
+```
+
+## iOS
+
+`adapters/ios` is a Swift package whose `Mitame` library depends on UIKit and Foundation only. `Mitame.capture` lays a `UIView` out at the requested size, renders it through `layer.render(in:)` at the screen scale, and writes the PNG and sidecar; `Mitame.write` takes a ready `UIImage`. The example test target runs on the iOS simulator through `xcodebuild test`.
+
+```swift
+@MainActor
+final class LoginFormTests: XCTestCase {
+    func testLoginForm() throws {
+        let view = LoginFormView(dark: false)
+        try Mitame.capture(view, name: "login_form", variant: ["theme": "light"], size: CGSize(width: 360, height: 240))
+    }
+}
+```
+
+The group defaults to the test file's stem in snake case (`login_form_tests`); pass `group:` to override. The sidecar records the render scale, the iOS version as `env.sdk`, and the simulator name as `env.device`. XCTest processes only see environment variables that xcodebuild receives with a `TEST_RUNNER_` prefix; `mitame run` sets both forms, so:
+
+```sh
+mitame run -- xcodebuild test -scheme Mitame -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.3.1'
+```
+
+Without `mitame run`, export `TEST_RUNNER_MITAME_OUTPUT_DIR` (an absolute path) and `TEST_RUNNER_MITAME_PROFILE` yourself. `xcodebuild -showdestinations -scheme Mitame` lists the simulator names and OS versions valid on a machine. A name alone is rejected when several runtimes have that device, so include `OS=<version>` (or `OS=latest` on CI).
+
+## Capturing with any command
+
+`mitame run [--profile <p>] [--keep-current] -- <command...>` clears `.mitame/current/<profile>/`, sets `MITAME_OUTPUT_DIR`, `MITAME_PROFILE`, and `MITAME_RUN_ID` (plus `TEST_RUNNER_`-prefixed copies for xcodebuild), runs the command, then compares and writes the report. `mitame test` is the Flutter-specific form of the same thing. Exit codes are the same as `compare`, with 2 when the command itself fails.
 
 ## Configuration
 
@@ -131,7 +181,7 @@ The default is strict on purpose: `pixel_tolerance` and `anti_aliasing` already 
 
 ## Roadmap
 
-Only Flutter is supported today. The contract is capture-agnostic, so iOS and Android are planned as additional capture adapters that write PNGs into the same layout and reuse `mitame compare` and `mitame approve` unchanged.
+The contract is capture-agnostic: the Android and iOS adapters were added without changing the binary, and one `mitame compare` run reports all three platforms in a single page.
 
 ### CLI
 
@@ -142,6 +192,7 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] report: viewer with zoom, onion-skin overlay, keyboard navigation, and filtering by id
 - [x] anti-aliasing detection
 - [x] `mitame test`: run `flutter test` then `compare` in one command for local feedback
+- [x] `mitame run -- <command>`: the same wrapper for any capture command
 - [x] skip sidecar copy in `approve` when the PNG is unchanged
 - [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)
 - [ ] GitHub Action to install the binary
@@ -163,19 +214,22 @@ The binary stops at `report/`. Getting the report to reviewers is left to the CI
 
 ### iOS
 
-Not started. Planned as an XCTest shim that renders a view to a PNG and writes it with `platform: ios` under `MITAME_OUTPUT_DIR`, in the spirit of swift-snapshot-testing. Full-screen capture through `xcrun simctl io screenshot` is a possible second tier.
-
-- [ ] XCTest shim writing PNG and sidecar
-- [ ] example project
-- [ ] scale handling for 2x / 3x devices
+- [x] `Mitame` Swift package writing PNG and sidecar from a `UIView` or `UIImage`
+- [x] example XCTest target verified on the iPhone 16 simulator
+- [x] scale recorded from the render (`UIScreen.main.scale`, 3.0 on iPhone 16)
+- [ ] SwiftUI helper (`UIHostingController` wrapper)
+- [ ] size inference when `size:` is omitted (containers report `noIntrinsicMetric` today)
+- [ ] root `Package.swift` so the package can be referenced from this repository's URL
+- [ ] full-screen tier through `xcrun simctl io screenshot`
 
 ### Android
 
-Not started. Planned as a Robolectric or instrumented-test shim that renders a View or Composable to a PNG and writes it with `platform: android`, in the spirit of Roborazzi. Full-screen capture through `adb exec-out screencap` is a possible second tier.
-
-- [ ] Robolectric shim writing PNG and sidecar
-- [ ] example project
-- [ ] density handling (`mdpi` … `xxxhdpi`)
+- [x] `mitame` Android library writing PNG and sidecar from a `View` or `Bitmap`
+- [x] example module verified with Robolectric native graphics, no emulator
+- [x] density recorded as `scale` (3.0 under `xxhdpi`)
+- [ ] Compose helper
+- [ ] publish to Maven Central
+- [ ] instrumented-test tier (device or emulator, files pulled with adb)
 
 ## Install
 
@@ -194,7 +248,7 @@ To build from source instead:
 cargo install --git https://github.com/mataku/mitame mitame-cli
 ```
 
-The Flutter adapter is not on pub.dev yet. Until then, reference it as a git dependency:
+The Android and iOS adapters are not published yet either; copy `adapters/android/mitame` or `adapters/ios/Sources/Mitame` into your project for now (SwiftPM cannot point at a subdirectory of a repository, so a root manifest is on the roadmap). The Flutter adapter is not on pub.dev yet. Until then, reference it as a git dependency:
 
 ```yaml
 dev_dependencies:
