@@ -33,6 +33,22 @@ figure { margin: 0; }
 figcaption { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
 img { max-width: 100%; height: auto; border: 1px solid var(--line); background:
   repeating-conic-gradient(#8882 0 25%, transparent 0 50%) 0 0 / 16px 16px; }
+.images figure { cursor: zoom-in; }
+.entry.filtered { display: none; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 16px; }
+.toolbar input[type=search] { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); min-width: 260px; }
+.toolbar kbd { font: 11px/1 ui-monospace, monospace; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); }
+dialog#viewer { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--fg); }
+dialog#viewer::backdrop { background: #000c; }
+#viewer .bar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+#viewer .bar code { font-size: 13px; }
+#viewer .bar button { padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); cursor: pointer; }
+#viewer .bar button.on { border-color: var(--fg); font-weight: 600; }
+#viewer .bar label { color: var(--muted); font-size: 12px; display: inline-flex; gap: 6px; align-items: center; }
+#viewer .stage { position: relative; height: calc(100vh - 53px); overflow: auto; padding: 16px; }
+#viewer .stack { position: relative; display: inline-block; }
+#viewer .stack img { display: block; max-width: none; border: 1px solid var(--line); }
+#viewer .stack img.over { position: absolute; left: 0; top: 0; }
 "#;
 
 const SCRIPT: &str = r#"
@@ -42,6 +58,87 @@ function localize(el, prefix) {
 }
 document.querySelectorAll('.generated').forEach(function (el) { localize(el, ''); });
 document.querySelectorAll('.captured').forEach(function (el) { localize(el, 'captured '); });
+var filter = document.getElementById('filter');
+filter.addEventListener('input', function () {
+  var q = filter.value.trim().toLowerCase();
+  document.querySelectorAll('.entry').forEach(function (el) {
+    el.classList.toggle('filtered', q !== '' && el.dataset.id.toLowerCase().indexOf(q) < 0);
+  });
+});
+var viewer = document.getElementById('viewer');
+var stage = viewer.querySelector('.stage');
+var base = document.getElementById('v-base');
+var over = document.getElementById('v-over');
+var state = { entry: null, mode: 'current', zoom: 'fit', opacity: 0.5 };
+function srcFor(mode) { return state.entry.dataset[mode] || ''; }
+function applyZoom(img) {
+  if (state.zoom === 'fit') { img.style.width = ''; img.style.maxWidth = '100%'; return; }
+  img.style.maxWidth = 'none';
+  img.style.width = (img.naturalWidth * Number(state.zoom)) + 'px';
+}
+function paint() {
+  var e = state.entry;
+  if (!e) { return; }
+  viewer.querySelector('code').textContent = e.dataset.id;
+  viewer.querySelectorAll('button[data-mode]').forEach(function (b) {
+    b.classList.toggle('on', b.dataset.mode === state.mode);
+    b.disabled = b.dataset.mode === 'onion' ? !(e.dataset.baseline && e.dataset.current) : !e.dataset[b.dataset.mode];
+  });
+  viewer.querySelectorAll('button[data-zoom]').forEach(function (b) { b.classList.toggle('on', b.dataset.zoom === state.zoom); });
+  var onion = state.mode === 'onion';
+  base.src = onion ? srcFor('baseline') : srcFor(state.mode);
+  over.src = onion ? srcFor('current') : '';
+  over.style.display = onion ? 'block' : 'none';
+  over.style.opacity = state.opacity;
+  base.onload = function () { applyZoom(base); if (onion) { over.style.width = base.style.width; over.style.maxWidth = base.style.maxWidth; } };
+  if (base.complete) { base.onload(); }
+}
+function openViewer(entry, mode) {
+  state.entry = entry;
+  state.mode = mode || 'current';
+  if (state.mode === 'diff' && !entry.dataset.diff) { state.mode = 'current'; }
+  paint();
+  if (!viewer.open) { viewer.showModal(); }
+  history.replaceState(null, '', '#view=' + encodeURIComponent(entry.dataset.id));
+}
+function closeViewer() { viewer.close(); history.replaceState(null, '', location.pathname); }
+function step(delta) {
+  var visible = Array.prototype.filter.call(document.querySelectorAll('.entry'), function (el) {
+    return !el.classList.contains('hidden') && !el.classList.contains('filtered') && (el.dataset.baseline || el.dataset.current);
+  });
+  var i = visible.indexOf(state.entry);
+  var next = visible[i + delta];
+  if (next) { openViewer(next, state.mode); }
+}
+document.querySelectorAll('.images figure').forEach(function (fig) {
+  fig.addEventListener('click', function (e) {
+    e.preventDefault();
+    openViewer(fig.closest('.entry'), fig.dataset.mode);
+  });
+});
+viewer.querySelectorAll('button[data-mode]').forEach(function (b) {
+  b.addEventListener('click', function () { state.mode = b.dataset.mode; paint(); });
+});
+viewer.querySelectorAll('button[data-zoom]').forEach(function (b) {
+  b.addEventListener('click', function () { state.zoom = b.dataset.zoom; paint(); });
+});
+viewer.querySelector('input[type=range]').addEventListener('input', function (ev) {
+  state.opacity = Number(ev.target.value); over.style.opacity = state.opacity;
+});
+viewer.querySelector('button.close').addEventListener('click', closeViewer);
+viewer.addEventListener('cancel', function (e) { e.preventDefault(); closeViewer(); });
+document.addEventListener('keydown', function (e) {
+  if (!viewer.open) { return; }
+  var modes = { '1': 'baseline', '2': 'current', '3': 'diff', '4': 'onion' };
+  if (modes[e.key]) { state.mode = modes[e.key]; paint(); }
+  else if (e.key === 'ArrowRight' || e.key === 'j') { step(1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'k') { step(-1); }
+});
+var hash = location.hash.match(/^#view=(.+)$/);
+if (hash) {
+  var target = document.querySelector('.entry[data-id="' + decodeURIComponent(hash[1]).replace(/"/g, '\"') + '"]');
+  if (target) { openViewer(target, 'current'); }
+}
 document.querySelectorAll('.summary a').forEach(function (a) {
   a.addEventListener('click', function (e) {
     e.preventDefault();
@@ -126,6 +223,7 @@ pub fn render_at(result: &ResultFile, generated_at: &str) -> String {
         result.results.len(),
         escape(generated_at)
     );
+    out.push_str("<div class=\"toolbar\"><input id=\"filter\" type=\"search\" placeholder=\"filter by id\" autocomplete=\"off\"><span class=\"detail\">click an image to open the viewer · <kbd>1</kbd> baseline <kbd>2</kbd> current <kbd>3</kbd> diff <kbd>4</kbd> onion · <kbd>←</kbd> <kbd>→</kbd> entries · <kbd>Esc</kbd> close</span></div>");
     out.push_str("<nav class=\"summary\">");
     for (status, count) in [
         (Status::Changed, s.changed),
@@ -197,6 +295,9 @@ pub fn render_at(result: &ResultFile, generated_at: &str) -> String {
         }
         out.push_str("</section>");
     }
+    out.push_str(
+        "<dialog id=\"viewer\"><div class=\"bar\"><code></code><button data-mode=\"baseline\">baseline</button><button data-mode=\"current\">current</button><button data-mode=\"diff\">diff</button><button data-mode=\"onion\">onion</button><label>opacity <input type=\"range\" min=\"0\" max=\"1\" step=\"0.05\" value=\"0.5\"></label><button data-zoom=\"fit\">fit</button><button data-zoom=\"1\">100%</button><button data-zoom=\"2\">200%</button><button class=\"close\">close</button></div><div class=\"stage\"><div class=\"stack\"><img id=\"v-base\" alt=\"\"><img id=\"v-over\" class=\"over\" alt=\"\"></div></div></dialog>",
+    );
     let _ = write!(out, "<script>{SCRIPT}</script></body></html>");
     out
 }
@@ -208,9 +309,18 @@ fn render_entry(out: &mut String, entry: &Entry) {
     } else {
         ""
     };
+    let copied = |side: &str| format!("{side}/{}.png", entry.id);
+    let baseline = entry.baseline.as_ref().map(|_| copied("baseline"));
+    let current = entry.current.as_ref().map(|_| copied("current"));
+    let diff = entry.diff.as_deref().map(report_relative);
+    let attr = |v: &Option<String>| v.as_deref().map(escape).unwrap_or_default();
     let _ = write!(
         out,
-        "<article class=\"entry{hidden}\" data-status=\"{name}\"><header><span class=\"status {name}\">{name}</span><code>{}</code>",
+        "<article class=\"entry{hidden}\" data-status=\"{name}\" data-id=\"{}\" data-baseline=\"{}\" data-current=\"{}\" data-diff=\"{}\"><header><span class=\"status {name}\">{name}</span><code>{}</code>",
+        escape(&entry.id),
+        if shows_images(entry) { attr(&baseline) } else { String::new() },
+        if shows_images(entry) { attr(&current) } else { String::new() },
+        attr(&diff),
         escape(&entry.id)
     );
     if let (Some(ratio), Some(pixels)) = (entry.diff_ratio, entry.diff_pixels) {
@@ -233,20 +343,12 @@ fn render_entry(out: &mut String, entry: &Entry) {
     out.push_str("</header>");
     if shows_images(entry) {
         out.push_str("<div class=\"images\">");
-        let copied = |side: &str| format!("{side}/{}.png", entry.id);
-        let images = [
-            (
-                "baseline",
-                entry.baseline.as_ref().map(|_| copied("baseline")),
-            ),
-            ("current", entry.current.as_ref().map(|_| copied("current"))),
-            ("diff", entry.diff.as_deref().map(report_relative)),
-        ];
+        let images = [("baseline", baseline), ("current", current), ("diff", diff)];
         for (label, path) in images {
             if let Some(p) = path {
                 let _ = write!(
                     out,
-                    "<figure><figcaption>{label}</figcaption><a href=\"{0}\"><img src=\"{0}\" alt=\"{label}\" loading=\"lazy\"></a></figure>",
+                    "<figure data-mode=\"{label}\"><figcaption>{label}</figcaption><a href=\"{0}\"><img src=\"{0}\" alt=\"{label}\" loading=\"lazy\"></a></figure>",
                     escape(&p)
                 );
             }
@@ -337,6 +439,12 @@ mod tests {
         assert!(html.contains("25.000% · 4 px"));
         assert!(html.contains("0.000% · 0 px"));
         assert!(html.contains("captured 2026-09-21T10:00:00Z"));
+        assert!(html.contains("id=\"filter\""));
+        assert!(html.contains("<dialog id=\"viewer\""));
+        assert!(html.contains("data-id=\"flutter/a/x__theme=dark\" data-baseline=\"baseline/flutter/a/x__theme=dark.png\" data-current=\"current/flutter/a/x__theme=dark.png\" data-diff=\"diff/flutter/a/x__theme=dark.png\""));
+        assert!(html.contains(
+            "data-id=\"flutter/a/&lt;y&gt;\" data-baseline=\"\" data-current=\"\" data-diff=\"\""
+        ));
         assert!(html.contains("flutter/a/&lt;y&gt;"));
         assert!(!html.contains("<y>"));
     }
