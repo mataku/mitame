@@ -3,7 +3,7 @@ use std::path::Path;
 
 use image::{Rgba, RgbaImage};
 use mitame_contract::Status;
-use mitame_core::{approve, compare, Config, Layout};
+use mitame_core::{compare, update_baseline, Config, Layout};
 
 fn write_png(path: &Path, width: u32, height: u32, color: [u8; 4], marks: &[(u32, u32)]) {
     let mut img = RgbaImage::from_pixel(width, height, Rgba(color));
@@ -170,30 +170,47 @@ fn compare_classifies_and_approve_promotes() {
     let html = fs::read_to_string(layout.root.join("report/index.html")).unwrap();
     assert!(html.contains("0.200% · 20 px"));
 
-    let approved = approve(&layout, &[]).unwrap();
-    assert_eq!(approved.copied.len(), 4);
-    assert_eq!(approved.unchanged, vec!["flutter/a/same".to_string()]);
-    assert_eq!(approved.deleted, vec!["flutter/a/gone".to_string()]);
+    let updated = update_baseline(&layout, &outcome.result, false).unwrap();
+    assert_eq!(updated.updated.len() + updated.added.len(), 4);
+    assert!(updated.deleted.is_empty());
+    assert!(layout
+        .root
+        .join("baseline/default/flutter/a/gone.png")
+        .exists());
     let outcome = compare(&config, &layout).unwrap();
     assert!(!outcome.failed);
     assert_eq!(outcome.result.summary.unchanged, 5);
+    assert_eq!(outcome.result.summary.removed, 1);
+    let pruned = update_baseline(&layout, &outcome.result, true).unwrap();
+    assert_eq!(pruned.deleted, vec!["flutter/a/gone".to_string()]);
+    assert!(!layout
+        .root
+        .join("baseline/default/flutter/a/gone.png")
+        .exists());
+    let outcome = compare(&config, &layout).unwrap();
     assert_eq!(outcome.result.results.len(), 5);
 }
 
 #[test]
-fn approve_selected_ids_only() {
+fn update_copies_added_entries_with_their_sidecars() {
     let dir = tempfile::tempdir().unwrap();
     let layout = Layout::new(dir.path().join(".mitame"), "linux");
+    let config = Config::default();
     let current = |id: &str| layout.root.join("current/linux").join(format!("{id}.png"));
     write_png(&current("ios/x"), 4, 4, [0, 0, 0, 255], &[]);
     write_png(&current("ios/y"), 4, 4, [0, 0, 0, 255], &[]);
     fs::write(layout.root.join("current/linux/ios/x.json"), "{}").unwrap();
 
-    let outcome = approve(&layout, &["ios/x".to_string()]).unwrap();
-    assert_eq!(outcome.copied, vec!["ios/x".to_string()]);
+    let outcome = compare(&config, &layout).unwrap();
+    let updated = update_baseline(&layout, &outcome.result, false).unwrap();
+    assert_eq!(
+        updated.added,
+        vec!["ios/x".to_string(), "ios/y".to_string()]
+    );
     assert!(layout.root.join("baseline/linux/ios/x.png").exists());
     assert!(layout.root.join("baseline/linux/ios/x.json").exists());
-    assert!(!layout.root.join("baseline/linux/ios/y.png").exists());
+    assert!(layout.root.join("baseline/linux/ios/y.png").exists());
+    assert!(!layout.root.join("baseline/linux/ios/y.json").exists());
 }
 
 #[test]
@@ -287,22 +304,32 @@ fn sidecar_schema_version_mismatch_is_error() {
 }
 
 #[test]
-fn approve_skips_identical_png_and_keeps_baseline_sidecar() {
+fn update_leaves_unchanged_entries_alone_even_when_bytes_differ() {
     let dir = tempfile::tempdir().unwrap();
     let layout = Layout::new(dir.path().join(".mitame"), "default");
+    let mut config = Config::default();
+    config.compare.max_diff_pixels = 5;
     let png = |side: &str| layout.root.join(side).join("default/flutter/a/x.png");
     let json = |side: &str| layout.root.join(side).join("default/flutter/a/x.json");
     write_png(&png("baseline"), 4, 4, [0, 0, 0, 255], &[]);
-    write_png(&png("current"), 4, 4, [0, 0, 0, 255], &[]);
-    fs::write(json("baseline"), "{\"captured_at\":\"old\"}").unwrap();
-    fs::write(json("current"), "{\"captured_at\":\"new\"}").unwrap();
+    write_png(&png("current"), 4, 4, [0, 0, 0, 255], &[(0, 0)]);
+    let sidecar = |stamp: &str| {
+        format!(
+            r#"{{"schema_version":1,"id":"flutter/a/x","platform":"flutter","capture":"widget","group":"a","name":"x","variant":{{}},"image":{{"width":4,"height":4,"scale":1.0}},"captured_at":"{stamp}"}}"#
+        )
+    };
+    fs::write(json("baseline"), sidecar("old")).unwrap();
+    fs::write(json("current"), sidecar("new")).unwrap();
 
-    let outcome = approve(&layout, &[]).unwrap();
-    assert_eq!(outcome.unchanged, vec!["flutter/a/x".to_string()]);
-    assert!(outcome.copied.is_empty());
+    let before = fs::read(png("baseline")).unwrap();
+    let outcome = compare(&config, &layout).unwrap();
+    assert_eq!(outcome.result.results[0].status, Status::Unchanged);
+    let updated = update_baseline(&layout, &outcome.result, false).unwrap();
+    assert!(updated.updated.is_empty());
+    assert_eq!(fs::read(png("baseline")).unwrap(), before);
     assert_eq!(
         fs::read_to_string(json("baseline")).unwrap(),
-        "{\"captured_at\":\"old\"}"
+        sidecar("old")
     );
 }
 

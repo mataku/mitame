@@ -116,7 +116,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     println!("prepare mitame baseline");
     exec(&flutter_test, &fixture, &env("mitame", "a"), true)?;
     exec(
-        &[mitame.to_str().unwrap(), "approve"],
+        &[mitame.to_str().unwrap(), "compare", "--update"],
         &fixture,
         &BTreeMap::new(),
         true,
