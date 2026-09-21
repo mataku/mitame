@@ -11,14 +11,16 @@ jobs:
   check-version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: |
           tag="${GITHUB_REF_NAME#v}"
           cargo_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
           pub_version="$(sed -n 's/^version: \(.*\)/\1/p' adapters/flutter/pubspec.yaml)"
-          echo "tag=$tag cargo=$cargo_version pubspec=$pub_version"
+          android_version="$(sed -n 's/.*version = "\(.*\)"/\1/p' adapters/android/mitame/build.gradle.kts | head -1)"
+          echo "tag=$tag cargo=$cargo_version pubspec=$pub_version android=$android_version"
           test "$tag" = "$cargo_version"
           test "$tag" = "$pub_version"
+          test "$tag" = "$android_version"
 
   build:
     needs: check-version
@@ -34,25 +36,36 @@ jobs:
             os: ubuntu-latest
           - target: aarch64-unknown-linux-musl
             os: ubuntu-24.04-arm
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: ${{ matrix.target }}
       - run: rustup target add ${{ matrix.target }}
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
       - run: cargo build --release --locked -p mitame-cli --target ${{ matrix.target }}
-      - run: |
+      - shell: bash
+        run: |
           staging="mitame-${{ matrix.target }}"
           mkdir -p "$staging"
-          cp "target/${{ matrix.target }}/release/mitame" "$staging/"
-          strip "$staging/mitame"
-          cp README.md LICENSE "$staging/" 2>/dev/null || cp README.md "$staging/"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "target/${{ matrix.target }}/release/mitame.exe" "$staging/"
+          else
+            cp "target/${{ matrix.target }}/release/mitame" "$staging/"
+            strip "$staging/mitame"
+          fi
+          cp README.md LICENSE "$staging/"
           tar -czf "$staging.tar.gz" "$staging"
-          shasum -a 256 "$staging.tar.gz" > "$staging.tar.gz.sha256"
-      - uses: actions/upload-artifact@v4
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "$staging.tar.gz" > "$staging.tar.gz.sha256"
+          else
+            shasum -a 256 "$staging.tar.gz" > "$staging.tar.gz.sha256"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mitame-${{ matrix.target }}
           path: |
@@ -63,8 +76,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: dist
           merge-multiple: true
