@@ -64,3 +64,8 @@ Thumbs.db
 /adapters/android/.gradle/
 /adapters/android/**/build/
 /adapters/android/local.properties
+
+# iOS adapter
+/adapters/ios/.build/
+/adapters/ios/.swiftpm/
+/adapters/ios/DerivedData/

@@ -1,0 +1,29 @@
+{
+  "capture" : "widget",
+  "captured_at" : "2026-09-21T12:50:43Z",
+  "display_name" : "login_form",
+  "env" : {
+    "ci" : false,
+    "device" : "iPhone 16",
+    "os" : "ios",
+    "sdk" : "18.3.1"
+  },
+  "ext" : {
+    "ios" : {
+
+    }
+  },
+  "group" : "login_form_tests",
+  "id" : "ios/login_form_tests/login_form__theme=dark",
+  "image" : {
+    "height" : 720,
+    "scale" : 3,
+    "width" : 1080
+  },
+  "name" : "login_form",
+  "platform" : "ios",
+  "schema_version" : 1,
+  "variant" : {
+    "theme" : "dark"
+  }
+}
