@@ -28,6 +28,8 @@ Prebuilt binaries will be published on GitHub Releases for macOS (arm64, x64), L
 cargo install --git https://github.com/mataku/mitame mitame-cli
 ```
 
+Windows is experimental: the archive is built in the release matrix, but nothing in CI runs it, and `mitame test` and `mitame run` start the given command without a shell, so a launcher such as `gradlew.bat` must be named with its extension, and `mitame test` needs `--flutter flutter.bat` or `MITAME_FLUTTER`.
+
 Once released, archives are named `mitame-<target>.tar.gz` with `<target>` one of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `x86_64-pc-windows-msvc`, each with a `.sha256` file:
 
 ```sh
