@@ -29,7 +29,7 @@ Early development. The end-to-end slice works for Flutter: capture from `flutter
 
 The identity of a screenshot is `<platform>/<group>/<name>[__<variant>]`. Variants are `key=value` pairs, sorted by key and joined with `,`. Every component is restricted to `[a-z0-9_.-]`. The optional JSON sidecar next to each PNG carries descriptive metadata; its schema is in `schema/sidecar.schema.json`, and the schema of `report/result.json` is in `schema/result.schema.json`.
 
-Adapters read two environment variables: `MITAME_OUTPUT_DIR` (default `<cwd>/.mitame/current`) and `MITAME_PROFILE` (default `default`). Profiles separate baselines that differ systematically, such as macOS and Linux font rasterization.
+Adapters read four environment variables: `MITAME_OUTPUT_DIR` (default `<cwd>/.mitame/current`), `MITAME_PROFILE` (default `default`), `MITAME_FONTS` (`ahem` skips font loading), and `MITAME_RUN_ID` (set by `mitame test`, used to detect identity collisions within a run). Profiles separate baselines that differ systematically, such as macOS and Linux font rasterization.
 
 ## Flutter
 
@@ -104,7 +104,7 @@ mismatch = "fail"
 
 [[rules]]
 match = "flutter/**/*__*theme=dark*"
-threshold = 0.01
+max_diff_pixels = 40
 ```
 
 Rules use `globset` semantics and the last matching rule wins. A rule may override `threshold`, `max_diff_pixels`, `pixel_tolerance`, and `anti_aliasing`.
@@ -123,6 +123,7 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] HTML report
 - [ ] report: zoom, baseline/current overlay, filtering by id
 - [ ] `mitame import` to move existing `test/**/goldens/*.png` into the baseline
+- [ ] `compare --clean` or equivalent so plain `flutter test` + `compare` cannot pick up stale captures
 - [x] anti-aliasing detection
 - [x] `mitame test`: run `flutter test` then `compare` in one command for local feedback
 - [x] skip sidecar copy in `approve` when the PNG is unchanged
