@@ -32,19 +32,23 @@ struct Common {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(about = "Compare current captures against the baseline and write the report")]
     Compare {
         #[command(flatten)]
         common: Common,
     },
+    #[command(about = "Promote current captures into the baseline, all of them or the given ids")]
     Approve {
         #[command(flatten)]
         common: Common,
         ids: Vec<String>,
     },
+    #[command(about = "Rewrite the HTML report from an existing result.json")]
     Report {
         #[command(flatten)]
         common: Common,
     },
+    #[command(about = "Run flutter test with capture enabled, then compare")]
     Test {
         #[command(flatten)]
         common: Common,
@@ -55,6 +59,7 @@ enum Command {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    #[command(about = "Run a command with capture enabled, then compare")]
     Run {
         #[command(flatten)]
         common: Common,
@@ -63,6 +68,7 @@ enum Command {
         #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
         command: Vec<String>,
     },
+    #[command(about = "Write the JSON schemas for the sidecar and result.json")]
     Schema {
         #[arg(long, default_value = "schema")]
         out: PathBuf,
