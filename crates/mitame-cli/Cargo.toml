@@ -16,3 +16,6 @@ mitame-core = { path = "../mitame-core" }
 clap = { version = "4", features = ["derive", "env"] }
 serde_json.workspace = true
 schemars.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

@@ -373,6 +373,7 @@ dependencies = [
  "mitame-core",
  "schemars",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]

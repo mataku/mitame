@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
@@ -50,6 +50,8 @@ enum Command {
         common: Common,
         #[arg(long, env = "MITAME_FLUTTER")]
         flutter: Option<PathBuf>,
+        #[arg(long)]
+        keep_current: bool,
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -79,17 +81,33 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
         Command::Test {
             common,
             flutter,
+            keep_current,
             args,
         } => {
             let (config, layout) = resolve(&common)?;
             let output_dir = std::path::absolute(layout.root.join("current"))?;
-            let flutter = resolve_flutter(flutter);
+            let flutter = resolve_flutter(flutter, Path::new("."));
             println!("using {}", flutter.display());
+            if !keep_current {
+                let dir = layout.current_dir();
+                if dir.exists() {
+                    std::fs::remove_dir_all(&dir)?;
+                }
+            }
+            let run_id = format!(
+                "{}-{}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis())
+                    .unwrap_or(0),
+                std::process::id()
+            );
             let status = std::process::Command::new(&flutter)
                 .arg("test")
                 .args(&args)
                 .env("MITAME_OUTPUT_DIR", &output_dir)
                 .env("MITAME_PROFILE", &layout.profile)
+                .env("MITAME_RUN_ID", &run_id)
                 .status()
                 .map_err(|e| format!("failed to run {}: {e}", flutter.display()))?;
             let code = run_compare(&config, &layout)?;
@@ -150,12 +168,27 @@ fn run_compare(config: &Config, layout: &Layout) -> Result<u8, Box<dyn std::erro
         "profile {}: unchanged {}, changed {}, added {}, removed {}, mismatch {}, error {}",
         layout.profile, s.unchanged, s.changed, s.added, s.removed, s.mismatch, s.error
     );
-    for entry in &outcome.result.results {
-        if entry.status != mitame_contract::Status::Unchanged {
+    let mut listed: Vec<&mitame_contract::Entry> = outcome
+        .result
+        .results
+        .iter()
+        .filter(|e| e.status != mitame_contract::Status::Unchanged)
+        .collect();
+    listed.sort_by(|a, b| {
+        b.diff_pixels
+            .unwrap_or(0)
+            .cmp(&a.diff_pixels.unwrap_or(0))
+            .then_with(|| a.id.cmp(&b.id))
+    });
+    for entry in listed {
+        {
             let detail = entry
                 .message
                 .clone()
-                .or_else(|| entry.diff_ratio.map(|r| format!("diff_ratio {r:.4}")))
+                .or_else(|| match (entry.diff_pixels, entry.diff_ratio) {
+                    (Some(px), Some(r)) => Some(format!("{px} px ({:.3}%)", r * 100.0)),
+                    _ => None,
+                })
                 .unwrap_or_default();
             println!(
                 "  {:<9} {} {}",
@@ -178,18 +211,41 @@ fn run_compare(config: &Config, layout: &Layout) -> Result<u8, Box<dyn std::erro
     })
 }
 
-fn resolve_flutter(explicit: Option<PathBuf>) -> PathBuf {
+fn resolve_flutter(explicit: Option<PathBuf>, project: &Path) -> PathBuf {
     if let Some(path) = explicit {
         return path;
     }
-    let fvm = PathBuf::from(".fvm")
+    if let Some(path) = flutter_from_fvmrc(project, fvm_cache_dir().as_deref()) {
+        return path;
+    }
+    let symlink = project
+        .join(".fvm")
         .join("flutter_sdk")
         .join("bin")
         .join("flutter");
-    if fvm.exists() {
-        return fvm;
+    if symlink.exists() {
+        return symlink;
     }
     PathBuf::from("flutter")
+}
+
+fn fvm_cache_dir() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("FVM_CACHE_PATH") {
+        return Some(PathBuf::from(path));
+    }
+    std::env::var_os("HOME").map(|home| PathBuf::from(home).join("fvm"))
+}
+
+fn flutter_from_fvmrc(project: &Path, cache: Option<&Path>) -> Option<PathBuf> {
+    let text = std::fs::read_to_string(project.join(".fvmrc")).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&text).ok()?;
+    let version = json.get("flutter")?.as_str()?;
+    let candidate = cache?
+        .join("versions")
+        .join(version)
+        .join("bin")
+        .join("flutter");
+    candidate.exists().then_some(candidate)
 }
 
 fn resolve(common: &Common) -> Result<(Config, Layout), Box<dyn std::error::Error>> {
@@ -204,4 +260,27 @@ fn resolve(common: &Common) -> Result<(Config, Layout), Box<dyn std::error::Erro
         .or_else(|| config.profile.clone())
         .unwrap_or_else(|| "default".to_string());
     Ok((config, Layout::new(root, profile)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fvmrc_resolves_to_cached_version_only_when_present() {
+        let dir = tempfile::tempdir().unwrap();
+        let cache = dir.path().join("cache");
+        let cached = cache.join("versions").join("3.35.2").join("bin");
+        std::fs::create_dir_all(&cached).unwrap();
+        std::fs::write(cached.join("flutter"), "").unwrap();
+        let project = dir.path().join("project");
+        std::fs::create_dir_all(&project).unwrap();
+        std::fs::write(project.join(".fvmrc"), r#"{"flutter": "3.35.2"}"#).unwrap();
+        assert_eq!(
+            flutter_from_fvmrc(&project, Some(&cache)),
+            Some(cached.join("flutter"))
+        );
+        std::fs::write(project.join(".fvmrc"), r#"{"flutter": "9.9.9"}"#).unwrap();
+        assert_eq!(flutter_from_fvmrc(&project, Some(&cache)), None);
+    }
 }
