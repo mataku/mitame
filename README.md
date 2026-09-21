@@ -47,6 +47,20 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 
 `loadFonts: true` loads the fonts declared in the package and the SDK's Roboto, so goldens render real glyphs instead of the Ahem placeholder font. Setting `MITAME_FONTS=ahem` in the environment skips font loading for that run, which renders text as Ahem boxes.
 
+### Cross-platform baselines
+
+Glyphs are rasterized by CoreText on macOS and by FreeType on Linux, so the same widget never produces identical pixels on both. Layout, line breaks, and glyph positions do match; only the shading inside and around glyphs differs. Measured on the example with the default tolerance and anti-aliasing detection, a form with a few labels differs by 0.04% (within the default threshold), while a text-heavy 360×640 widget differs by 3%, which no tolerance short of hiding real changes will absorb. Ahem does not fix this either: box edges still differ by a few hundred pixels per screen.
+
+The reliable setup is therefore one baseline per rendering platform, selected by `MITAME_PROFILE`. Developers on macOS keep a `default` baseline for local runs, and CI compares against a `linux` baseline that was itself rendered on Linux. To produce or refresh the Linux baseline from a Mac, run the capture in a Linux container with the repository mounted (Rancher Desktop, Docker, or Podman all work):
+
+```sh
+nerdctl run --rm -v "$PWD:/work" -w /work -e MITAME_PROFILE=linux \
+  ghcr.io/cirruslabs/flutter:3.41.6 sh -c 'flutter pub get && flutter test'
+mitame approve --profile linux
+```
+
+Delete `.dart_tool/` before switching between the container and the host, since `flutter pub get` writes absolute SDK paths into it.
+
 ```dart
 for (final variant in Mitame.matrix({'theme': ['light', 'dark'], 'locale': ['ja', 'en']})) {
   await tester.pumpWidget(buildApp(variant));
@@ -112,6 +126,7 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 The binary stops at `report/`. Getting the report to reviewers is left to the CI system: upload `.mitame/report/` with `actions/upload-artifact`, and if a pull request comment is wanted, a separate `mitame-report` GitHub Action that reads `result.json` can post it. Baselines live in git (plain or git-lfs); the binary does not talk to object storage or the GitHub API.
 
 - [ ] `mitame-report` GitHub Action that summarizes `result.json` as a pull request comment
+- [ ] workflow template that refreshes the `linux` baseline on CI and commits it to the pull request branch
 
 ### Flutter
 
