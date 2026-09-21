@@ -49,6 +49,12 @@ impl Default for CompareConfig {
     }
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CaptureConfig {
+    pub command: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Policy {
@@ -85,6 +91,7 @@ pub struct Rule {
 #[serde(default)]
 pub struct Config {
     pub paths: Paths,
+    pub capture: CaptureConfig,
     pub compare: CompareConfig,
     pub policy: Policy,
     #[serde(default)]
@@ -98,6 +105,9 @@ pub const CONFIG_TEMPLATE: &str = r#"# mitame configuration. Every key is option
 
 [paths]
 root = ".mitame"
+
+[capture]
+command = []               # the test command `mitame capture` and `mitame run` execute, e.g. ["flutter", "test"]
 
 [compare]
 threshold = 0.0            # allowed diff ratio (differing pixels / total pixels)

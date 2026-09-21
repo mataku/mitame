@@ -3,7 +3,7 @@ use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
 use mitame_contract::{ResultFile, Sidecar};
-use mitame_core::{approve, compare, Config, Layout, CONFIG_TEMPLATE};
+use mitame_core::{compare, update_baseline, Config, Layout, CONFIG_TEMPLATE};
 
 const EXIT_OK: u8 = 0;
 const EXIT_DIFF: u8 = 1;
@@ -37,47 +37,57 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
+    #[command(about = "Run the test command with capture enabled and write .mitame/current/")]
+    Capture {
+        #[command(flatten)]
+        common: Common,
+        #[command(flatten)]
+        capture: CaptureArgs,
+    },
     #[command(about = "Compare current captures against the baseline and write the report")]
     Compare {
         #[command(flatten)]
         common: Common,
+        #[command(flatten)]
+        update: UpdateArgs,
     },
-    #[command(about = "Promote current captures into the baseline, all of them or the given ids")]
-    Approve {
+    #[command(about = "Capture, then compare; the report is written even when the command fails")]
+    Run {
         #[command(flatten)]
         common: Common,
-        ids: Vec<String>,
+        #[command(flatten)]
+        capture: CaptureArgs,
+        #[command(flatten)]
+        update: UpdateArgs,
     },
     #[command(about = "Rewrite the HTML report from an existing result.json")]
     Report {
         #[command(flatten)]
         common: Common,
     },
-    #[command(about = "Run flutter test with capture enabled, then compare")]
-    Test {
-        #[command(flatten)]
-        common: Common,
-        #[arg(long, env = "MITAME_FLUTTER")]
-        flutter: Option<PathBuf>,
-        #[arg(long)]
-        keep_current: bool,
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
-    #[command(about = "Run a command with capture enabled, then compare")]
-    Run {
-        #[command(flatten)]
-        common: Common,
-        #[arg(long)]
-        keep_current: bool,
-        #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
-        command: Vec<String>,
-    },
     #[command(about = "Write the JSON schemas for the sidecar and result.json")]
     Schema {
         #[arg(long, default_value = "schema")]
         out: PathBuf,
     },
+}
+
+#[derive(Args)]
+struct CaptureArgs {
+    #[arg(long, env = "MITAME_FLUTTER")]
+    flutter: Option<PathBuf>,
+    #[arg(long)]
+    keep_current: bool,
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    args: Vec<String>,
+}
+
+#[derive(Args)]
+struct UpdateArgs {
+    #[arg(long)]
+    update: bool,
+    #[arg(long, requires = "update")]
+    prune: bool,
 }
 
 fn main() -> ExitCode {
@@ -98,34 +108,43 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             if path.exists() && !force {
                 return Err("mitame.toml already exists; pass --force to overwrite it".into());
             }
-            std::fs::write(path, CONFIG_TEMPLATE)?;
+            let mut text = CONFIG_TEMPLATE.to_string();
+            if let Some(command) = detect_capture_command(Path::new(".")) {
+                let rendered = command
+                    .iter()
+                    .map(|c| format!("{c:?}"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                text = text.replacen("command = []", &format!("command = [{rendered}]"), 1);
+                println!("detected test command: {}", command.join(" "));
+            } else {
+                println!("no test command detected; set [capture] command in mitame.toml");
+            }
+            std::fs::write(path, text)?;
             println!("wrote {}", path.display());
             println!("commit .mitame/baseline/ and add .mitame/current/ and .mitame/report/ to .gitignore");
             Ok(EXIT_OK)
         }
-        Command::Compare { common } => {
-            let (config, layout, _) = resolve(&common)?;
-            run_compare(&config, &layout)
-        }
-        Command::Test {
-            common,
-            flutter,
-            keep_current,
-            args,
-        } => {
+        Command::Capture { common, capture } => {
             let (config, layout, project) = resolve(&common)?;
-            let flutter = resolve_flutter(flutter, &project);
-            let mut command = vec![flutter.to_string_lossy().into_owned(), "test".to_string()];
-            command.extend(args);
-            run_capture(&config, &layout, &command, keep_current)
+            let command = build_command(&config, &capture, &project)?;
+            let ok = run_capture(&layout, &command, capture.keep_current)?;
+            Ok(if ok { EXIT_OK } else { EXIT_ERROR })
+        }
+        Command::Compare { common, update } => {
+            let (config, layout, _) = resolve(&common)?;
+            run_compare(&config, &layout, &update)
         }
         Command::Run {
             common,
-            keep_current,
-            command,
+            capture,
+            update,
         } => {
-            let (config, layout, _) = resolve(&common)?;
-            run_capture(&config, &layout, &command, keep_current)
+            let (config, layout, project) = resolve(&common)?;
+            let command = build_command(&config, &capture, &project)?;
+            let ok = run_capture(&layout, &command, capture.keep_current)?;
+            let code = run_compare(&config, &layout, &update)?;
+            Ok(if ok { code } else { EXIT_ERROR })
         }
         Command::Report { common } => {
             let (_, layout, _) = resolve(&common)?;
@@ -133,24 +152,6 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             let result: ResultFile = serde_json::from_str(&text)?;
             let path = mitame_core::write_html(&layout, &result)?;
             println!("report: {}", path.display());
-            Ok(EXIT_OK)
-        }
-        Command::Approve { common, ids } => {
-            let (_, layout, _) = resolve(&common)?;
-            let outcome = approve(&layout, &ids)?;
-            for id in &outcome.copied {
-                println!("approved {id}");
-            }
-            for id in &outcome.deleted {
-                println!("deleted  {id}");
-            }
-            if !outcome.unchanged.is_empty() {
-                println!(
-                    "unchanged {} (already in baseline)",
-                    outcome.unchanged.len()
-                );
-            }
-            println!("baseline: {}", layout.baseline_dir().display());
             Ok(EXIT_OK)
         }
         Command::Schema { out } => {
@@ -171,12 +172,31 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
     }
 }
 
-fn run_capture(
+fn build_command(
     config: &Config,
+    capture: &CaptureArgs,
+    project: &Path,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let mut command = config.capture.command.clone();
+    command.extend(capture.args.iter().cloned());
+    if command.is_empty() {
+        return Err(
+            "no test command: set [capture] command in mitame.toml or pass one after --".into(),
+        );
+    }
+    if command[0] == "flutter" {
+        command[0] = resolve_flutter(capture.flutter.clone(), project)
+            .to_string_lossy()
+            .into_owned();
+    }
+    Ok(command)
+}
+
+fn run_capture(
     layout: &Layout,
     command: &[String],
     keep_current: bool,
-) -> Result<u8, Box<dyn std::error::Error>> {
+) -> Result<bool, Box<dyn std::error::Error>> {
     let output_dir = std::path::absolute(layout.root.join("current"))?;
     println!("using {}", command.join(" "));
     if !keep_current {
@@ -210,18 +230,20 @@ fn run_capture(
     let status = child
         .status()
         .map_err(|e| format!("failed to run {}: {e}", command[0]))?;
-    let code = run_compare(config, layout)?;
     if !status.success() {
         eprintln!(
-            "{} exited with {status}; the report covers the captures that succeeded",
+            "{} exited with {status}; captures written before that are kept",
             command[0]
         );
-        return Ok(EXIT_ERROR);
     }
-    Ok(code)
+    Ok(status.success())
 }
 
-fn run_compare(config: &Config, layout: &Layout) -> Result<u8, Box<dyn std::error::Error>> {
+fn run_compare(
+    config: &Config,
+    layout: &Layout,
+    update: &UpdateArgs,
+) -> Result<u8, Box<dyn std::error::Error>> {
     let outcome = compare(config, layout)?;
     let s = &outcome.result.summary;
     println!(
@@ -262,6 +284,19 @@ fn run_compare(config: &Config, layout: &Layout) -> Result<u8, Box<dyn std::erro
         "report: {}",
         layout.report_dir().join("index.html").display()
     );
+    if update.update {
+        let applied = update_baseline(layout, &outcome.result, update.prune)?;
+        for id in &applied.updated {
+            println!("updated  {id}");
+        }
+        for id in &applied.added {
+            println!("added    {id}");
+        }
+        for id in &applied.deleted {
+            println!("deleted  {id}");
+        }
+        println!("baseline: {}", layout.baseline_dir().display());
+    }
     Ok(if outcome.errored {
         EXIT_ERROR
     } else if outcome.failed {
@@ -306,6 +341,16 @@ fn flutter_from_fvmrc(project: &Path, cache: Option<&Path>) -> Option<PathBuf> {
         .join("bin")
         .join("flutter");
     candidate.exists().then_some(candidate)
+}
+
+fn detect_capture_command(dir: &Path) -> Option<Vec<&'static str>> {
+    if dir.join("pubspec.yaml").is_file() {
+        return Some(vec!["flutter", "test"]);
+    }
+    if dir.join("settings.gradle.kts").is_file() || dir.join("settings.gradle").is_file() {
+        return Some(vec!["./gradlew", "test", "--rerun"]);
+    }
+    None
 }
 
 fn find_project_dir(start: &Path) -> Option<PathBuf> {
@@ -384,6 +429,22 @@ mod tests {
         std::fs::create_dir_all(inner.join(".mitame").join("baseline")).unwrap();
         assert_eq!(find_project_dir(&leaf), Some(inner.clone()));
         assert_eq!(find_project_dir(&outer), Some(outer));
+    }
+
+    #[test]
+    fn capture_command_is_detected_from_project_files() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(detect_capture_command(dir.path()), None);
+        std::fs::write(dir.path().join("settings.gradle.kts"), "").unwrap();
+        assert_eq!(
+            detect_capture_command(dir.path()),
+            Some(vec!["./gradlew", "test", "--rerun"])
+        );
+        std::fs::write(dir.path().join("pubspec.yaml"), "").unwrap();
+        assert_eq!(
+            detect_capture_command(dir.path()),
+            Some(vec!["flutter", "test"])
+        );
     }
 
     #[test]

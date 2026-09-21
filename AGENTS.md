@@ -13,24 +13,24 @@ mitame is a visual regression testing tool: a Rust binary (`crates/`) that compa
 - Adapters read exactly `MITAME_OUTPUT_DIR`, `MITAME_PROFILE`, `MITAME_RUN_ID`, and (Flutter only) `MITAME_FONTS`. New behavior is configured on the binary side (`mitame.toml`), not by adding adapter inputs.
 - Changing the sidecar or `result.json` shape means updating `crates/mitame-contract`, regenerating `schema/` with `cargo run -p mitame-cli -- schema`, and mirroring the change in all three adapters. Additive fields do not bump `schema_version`; renames and removals do.
 - Comparison defaults stay strict (`threshold = 0.0`, `max_diff_pixels = 0`). Do not loosen them to make an example pass; adjust the example or add a `[[rules]]` entry for the one identity that needs it.
-- Baselines under `adapters/*/example/.mitame/baseline/` (and `adapters/ios/.mitame/baseline/`) are committed fixtures rendered on macOS. Regenerate them with `mitame test`/`mitame run` followed by `mitame approve` only when the example itself changes, and say so in the commit body.
+- Baselines under `adapters/*/example/.mitame/baseline/` (and `adapters/ios/.mitame/baseline/`) are committed fixtures rendered on macOS. Regenerate them with `mitame run --update` only when the example itself changes, and say so in the commit body.
 
 ## Build and verify
 
 ```sh
 cargo build && cargo test && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check
 cd adapters/flutter && dart analyze && dart format --set-exit-if-changed -o none lib example/lib example/test
-cd adapters/flutter/example && ../../../target/debug/mitame test
-cd adapters/android && ../../target/debug/mitame run -- ./gradlew :example:testDebugUnitTest --rerun
+cd adapters/flutter/example && ../../../target/debug/mitame run
+cd adapters/android && ../../target/debug/mitame run
 cd adapters/ios && ../../target/debug/mitame run -- xcodebuild test -scheme Mitame -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.3.1'
 ```
 
 - The Rust toolchain is pinned in `rust-toolchain.toml`. If `cargo` on `PATH` is a toolchain binary rather than the rustup proxy, the pin is ignored and dependencies fail to parse; run through `rustup run <version> cargo` or put the pinned toolchain's `bin` first on `PATH`.
-- `mitame test` and `mitame run` clear `.mitame/current/<profile>/` before capturing. If you call `flutter test`, Gradle, or xcodebuild directly, delete that directory first or stale captures will be compared.
-- Gradle skips an up-to-date test task, so always pass `--rerun` when capturing.
+- `mitame capture` and `mitame run` clear `.mitame/current/<profile>/` before running the test command from `[capture] command` in `mitame.toml` (the Flutter and Android examples ship one; iOS passes the command after `--`). If you call `flutter test`, Gradle, or xcodebuild directly, delete that directory first or stale captures will be compared.
+- Gradle skips an up-to-date test task, so the capture command always carries `--rerun`.
 - xcodebuild forwards environment variables to tests only with a `TEST_RUNNER_` prefix; `mitame run` sets both forms. A simulator name that exists for several OS versions must be qualified with `OS=`; `xcodebuild -showdestinations -scheme Mitame` lists valid ones.
 - A change to the report is verified by rendering it: run the Flutter example with a visible change (edit the title in `lib/login_form.dart`), open `.mitame/report/index.html`, and read the diff image. Do not report report changes as done from unit tests alone.
-- Every example must pass its gate before docs are updated: files land at the documented identity, the sidecar `id` matches the path, `approve` then `compare` exits 0, and a visible change exits 1.
+- Every example must pass its gate before docs are updated: files land at the documented identity, the sidecar `id` matches the path, `run --update` then `run` exits 0, and a visible change exits 1.
 
 ## Conventions
 
