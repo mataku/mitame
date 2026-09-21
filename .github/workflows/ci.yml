@@ -68,12 +68,24 @@ jobs:
           path: adapters/android/.mitame/report
 
   ios:
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo build --locked -p mitame-cli
-      - run: ../../target/debug/mitame run --profile ci-macos -- xcodebuild test -scheme Mitame -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' -quiet
+      - id: simulator
+        run: |
+          udid=$(xcrun simctl list devices available -j | jq -r '
+            [ .devices | to_entries[]
+              | select(.key | test("SimRuntime\\.iOS-"))
+              | { v: (.key | capture("iOS-(?<v>[0-9-]+)$").v | split("-") | map(tonumber)), devices: .value } ]
+            | sort_by(.v) | last | .devices
+            | map(select(.name | test("^iPhone")))
+            | (map(select(.name | test("^iPhone [0-9]+$"))) + .)[0].udid // empty')
+          test -n "$udid"
+          xcrun simctl list devices available | grep "$udid"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      - run: ../../target/debug/mitame run --profile ci-macos -- xcodebuild test -scheme Mitame -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" -quiet
         working-directory: adapters/ios
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
