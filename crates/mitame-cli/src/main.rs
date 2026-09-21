@@ -48,6 +48,8 @@ enum Command {
     Test {
         #[command(flatten)]
         common: Common,
+        #[arg(long, env = "MITAME_FLUTTER")]
+        flutter: Option<PathBuf>,
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -74,20 +76,28 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             let (config, layout) = resolve(&common)?;
             run_compare(&config, &layout)
         }
-        Command::Test { common, args } => {
+        Command::Test {
+            common,
+            flutter,
+            args,
+        } => {
             let (config, layout) = resolve(&common)?;
             let output_dir = std::path::absolute(layout.root.join("current"))?;
-            let status = std::process::Command::new("flutter")
+            let flutter = resolve_flutter(flutter);
+            println!("using {}", flutter.display());
+            let status = std::process::Command::new(&flutter)
                 .arg("test")
                 .args(&args)
                 .env("MITAME_OUTPUT_DIR", &output_dir)
                 .env("MITAME_PROFILE", &layout.profile)
-                .status()?;
+                .status()
+                .map_err(|e| format!("failed to run {}: {e}", flutter.display()))?;
+            let code = run_compare(&config, &layout)?;
             if !status.success() {
-                eprintln!("flutter test exited with {status}");
+                eprintln!("flutter test exited with {status}; the report covers the captures that succeeded");
                 return Ok(EXIT_ERROR);
             }
-            run_compare(&config, &layout)
+            Ok(code)
         }
         Command::Report { common } => {
             let (_, layout) = resolve(&common)?;
@@ -166,6 +176,20 @@ fn run_compare(config: &Config, layout: &Layout) -> Result<u8, Box<dyn std::erro
     } else {
         EXIT_OK
     })
+}
+
+fn resolve_flutter(explicit: Option<PathBuf>) -> PathBuf {
+    if let Some(path) = explicit {
+        return path;
+    }
+    let fvm = PathBuf::from(".fvm")
+        .join("flutter_sdk")
+        .join("bin")
+        .join("flutter");
+    if fvm.exists() {
+        return fvm;
+    }
+    PathBuf::from("flutter")
 }
 
 fn resolve(common: &Common) -> Result<(Config, Layout), Box<dyn std::error::Error>> {

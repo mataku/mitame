@@ -77,7 +77,7 @@ mitame compare      # exit 0: no differences, 1: differences or policy failure, 
 mitame approve      # promote current into baseline
 ```
 
-`mitame test [flutter test args]` runs both steps in one command for local feedback: it sets the output directory and profile, runs `flutter test`, then compares. mitame's own flags such as `--profile` go before the `flutter test` arguments. `compare` writes `.mitame/report/index.html` alongside `result.json`. The report directory is self-contained (it holds copies of the baseline and current images it shows), so uploading `.mitame/report/` as a CI artifact is enough to review a run. `mitame report` regenerates the HTML from an existing `result.json`.
+`mitame test [flutter test args]` runs both steps in one command for local feedback: it sets the output directory and profile, runs `flutter test`, then compares. mitame's own flags such as `--profile` go before the `flutter test` arguments. The Flutter binary is `--flutter <path>`, then `MITAME_FLUTTER`, then `.fvm/flutter_sdk/bin/flutter` when the project uses fvm, then `flutter` on `PATH`. When a test fails, the comparison still runs on the captures that succeeded and the report is written, but the exit code is 2. `compare` writes `.mitame/report/index.html` alongside `result.json`. The report directory is self-contained (it holds copies of the baseline and current images it shows), so uploading `.mitame/report/` as a CI artifact is enough to review a run. `mitame report` regenerates the HTML from an existing `result.json`.
 
 ## Configuration
 
