@@ -43,7 +43,7 @@ jobs:
       - run: cargo build --locked -p mitame-cli
       - run: ../../../target/debug/mitame compare --profile linux
         working-directory: adapters/flutter/example
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: mitame-report
@@ -61,7 +61,7 @@ jobs:
       - run: cargo build --locked -p mitame-cli
       - run: ../../target/debug/mitame run --profile linux -- ./gradlew :example:testDebugUnitTest --rerun --no-daemon
         working-directory: adapters/android
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: mitame-report-android
@@ -87,7 +87,7 @@ jobs:
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
       - run: ../../target/debug/mitame run --profile ci-macos -- xcodebuild test -scheme Mitame -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" -quiet
         working-directory: adapters/ios
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: mitame-report-ios
