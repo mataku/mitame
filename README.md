@@ -63,6 +63,23 @@ mitame approve --profile linux
 
 Delete `.dart_tool/` before switching between the container and the host, since `flutter pub get` writes absolute SDK paths into it.
 
+### CI
+
+A minimal GitHub Actions job captures with the `linux` profile, compares, and uploads the report. The `linux` baseline is committed like any other file, produced either with the container recipe above or by running the same two commands plus `mitame approve --profile linux` in a workflow and committing the result.
+
+```yaml
+- run: flutter test
+  env:
+    MITAME_PROFILE: linux
+- run: mitame compare --profile linux
+- uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: mitame-report
+    path: .mitame/report
+```
+
+`compare` exits 1 when anything changed, which fails the job; the uploaded `report/` opens as a standalone page. Local runs keep using the `default` profile and never compare against the Linux baseline.
 
 ```dart
 for (final variant in Mitame.matrix({'theme': ['light', 'dark'], 'locale': ['ja', 'en']})) {
@@ -82,7 +99,7 @@ mitame approve      # promote current into baseline
 
 Once the adapter is installed, `flutter test --update-goldens` also writes into `.mitame/current/` instead of the golden files next to the tests. Existing goldens can be moved into the baseline by copying: the adapter writes exactly the bytes stock `flutter_test` would have written.
 
-`mitame test [flutter test args]` runs both steps in one command for local feedback: it sets the output directory and profile, runs `flutter test`, then compares. mitame's own flags such as `--profile` go before the `flutter test` arguments. The Flutter binary is `--flutter <path>`, then `MITAME_FLUTTER`, then the version named in `.fvmrc` if it exists under the fvm cache (`FVM_CACHE_PATH` or `~/fvm`), then `.fvm/flutter_sdk/bin/flutter`, then `flutter` on `PATH`; the chosen path is printed as `using …`. Before running, `mitame test` clears `.mitame/current/<profile>/` so that captures from an earlier run cannot show up as this run's results; pass `--keep-current` to keep them, for example when running a subset of test files, in which case the tests that did not run appear as `removed` (a warning by default). When a test fails, the comparison still runs on the captures that succeeded and the report is written, but the exit code is 2. `compare` writes `.mitame/report/index.html` alongside `result.json`. The report directory is self-contained (it holds copies of the baseline and current images it shows), so uploading `.mitame/report/` as a CI artifact is enough to review a run. Every entry shows its pixel count, capture time, and, when any pixel differs, the three images with the differing region outlined on the diff. Clicking an image opens a viewer that switches between baseline, current, diff, and an onion-skin overlay with adjustable opacity, zooms to 100% or 200%, steps through entries with the arrow keys, and can be linked to directly with `index.html#view=<id>`. The search box filters entries by id. `mitame report` regenerates the HTML from an existing `result.json`.
+`mitame test [flutter test args]` runs both steps in one command for local feedback: it sets the output directory and profile, runs `flutter test`, then compares. mitame's own flags such as `--profile` go before the `flutter test` arguments. The Flutter binary is `--flutter <path>`, then `MITAME_FLUTTER`, then the version named in `.fvmrc` if it exists under the fvm cache (`FVM_CACHE_PATH` or `~/fvm`), then `.fvm/flutter_sdk/bin/flutter`, then `flutter` on `PATH`; the chosen path is printed as `using …`. Before running, `mitame test` clears `.mitame/current/<profile>/` so that captures from an earlier run cannot show up as this run's results; pass `--keep-current` to keep them, for example when running a subset of test files, in which case the tests that did not run appear as `removed` (a warning by default). When a test fails, the comparison still runs on the captures that succeeded and the report is written, but the exit code is 2. If you run `flutter test` directly instead, delete `.mitame/current/` first so captures from an earlier run are not compared as this run's. `compare` writes `.mitame/report/index.html` alongside `result.json`. The report directory is self-contained (it holds copies of the baseline and current images it shows), so uploading `.mitame/report/` as a CI artifact is enough to review a run. Every entry shows its pixel count, capture time, and, when any pixel differs, the three images with the differing region outlined on the diff. Clicking an image opens a viewer that switches between baseline, current, diff, and an onion-skin overlay with adjustable opacity, zooms to 100% or 200%, steps through entries with the arrow keys, and can be linked to directly with `index.html#view=<id>`. The search box filters entries by id. `mitame report` regenerates the HTML from an existing `result.json`.
 
 ## Configuration
 
@@ -123,8 +140,6 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] `result.json` and diff images
 - [x] HTML report
 - [x] report: viewer with zoom, onion-skin overlay, keyboard navigation, and filtering by id
-- [ ] `mitame import` to move existing `test/**/goldens/*.png` into the baseline
-- [ ] `compare --clean` or equivalent so plain `flutter test` + `compare` cannot pick up stale captures
 - [x] anti-aliasing detection
 - [x] `mitame test`: run `flutter test` then `compare` in one command for local feedback
 - [x] skip sidecar copy in `approve` when the PNG is unchanged
@@ -137,7 +152,6 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 The binary stops at `report/`. Getting the report to reviewers is left to the CI system: upload `.mitame/report/` with `actions/upload-artifact`, and if a pull request comment is wanted, a separate `mitame-report` GitHub Action that reads `result.json` can post it. Baselines live in git (plain or git-lfs); the binary does not talk to object storage or the GitHub API.
 
 - [ ] `mitame-report` GitHub Action that summarizes `result.json` as a pull request comment
-- [ ] workflow template that refreshes the `linux` baseline on CI and commits it to the pull request branch
 
 ### Flutter
 
