@@ -6,19 +6,19 @@ Visual regression testing for Flutter, Android, and iOS with one binary and one 
 
 Flutter already has golden tests, and Android and iOS have mature snapshot libraries. mitame exists because of what those leave unsolved.
 
-- **Upgrades stop invalidating every golden.** `flutter_test` compares pixels exactly, so an engine or SDK update that shifts a few pixels of anti-aliasing fails every golden at once, and the only remedies are to regenerate them all without knowing whether a real change slipped in, or to render text as Ahem boxes on CI and never check real text. mitame's per-pixel tolerance and anti-aliasing detection separate that noise from change (a real project's 24 goldens went from 8 to 9 differing pixels each under stock to 0 under mitame), while every remaining pixel counts, so a one-word change is never hidden. Systematic differences between rendering platforms, such as macOS against Linux, are not absorbed; they get a baseline per profile instead.
+- **Upgrades stop invalidating every golden.** `flutter_test` compares pixels exactly, so an engine or SDK update that shifts a few pixels of anti-aliasing fails every golden at once, and the only remedies are to regenerate them all without knowing whether a real change slipped in, or to render text as Ahem boxes on CI and never check real text. mitame's per-pixel tolerance and anti-aliasing detection separate that noise from change (in one measured Flutter app, 24 goldens went from 8 to 9 differing pixels each under stock to 0 under mitame), while every remaining pixel counts, so a one-word change is never hidden. Systematic differences between rendering platforms, such as macOS against Linux, are not absorbed; they get a baseline per profile instead.
 - **Review instead of assert.** A visual difference does not fail the test run. `mitame compare` reports every changed screenshot with a diff image in a self-contained HTML page, and `--update` writes the changed and added ones into the baseline, where git shows the change and lets you revert what you do not want. Baselines live under `.mitame/baseline/` as one reviewable set rather than scattered next to tests. This is the workflow of hosted tools like Percy or reg-suit, without a hosted service and without a Node toolchain in a mobile repository.
 - **One pipeline for Flutter, Android, and iOS.** The adapters share a file contract, so the same tolerance, anti-aliasing detection, profiles, approval flow, and report page apply to all three. The Android and iOS adapters were added without changing the binary, and a single `compare` run reports every platform on one page.
 - **Dependencies that do not rot.** Golden helper packages pull in their own dependency trees and break, or are discontinued, when the SDK moves. Each mitame adapter depends only on its platform's SDK (`flutter_test`, the Android SDK, UIKit), so the only thing it tracks is that SDK, and the comparison logic lives in a static binary with no relationship to your lockfiles.
 - **Comparison outside the test process.** The test isolate only encodes and writes a PNG; decoding, diffing, and reporting happen once per suite in Rust, in parallel, and never block a test file. Unchanged goldens cost the same as stock; when every golden differs, the comparison overhead for 200 phone-size goldens drops from 2.9 s to 0.7 s, and from 18.8 s to 3.8 s at 3x device size (`mitame-bench`, 4 jobs, Apple Silicon). Rendering and PNG encoding inside the test runner are unchanged and remain the larger share of total time.
 
-### When mitame is not the right tool
+### Who it is for
 
-If you work on a single native platform and already rely on Roborazzi's Compose and Preview integration or swift-snapshot-testing's SwiftUI and non-image strategies, mitame's adapters give you less: they render a view to a bitmap and stop. The gain is for teams that mix Flutter with native modules, or that want one visual regression pipeline and one report across repositories.
+Flutter teams first: the golden churn on SDK upgrades is the problem mitame was built against. The Android and iOS adapters serve two other cases. One is a company whose Flutter, iOS, and Android apps live in separate repositories and want the same binary, the same `mitame.toml`, the same report, and the same CI shape in each of them. The other is a single native codebase that wants the review-style flow (tolerance and anti-aliasing detection, an HTML report, a baseline updated through git) with an adapter that depends on the platform SDK alone. If you rely on Roborazzi's Compose Preview integration or on swift-snapshot-testing's non-image strategies, keep them: mitame's adapters render a view to a bitmap and stop.
 
 ## Status
 
-Early development, no release cut yet. The end-to-end flow works for Flutter (`mitame run` around `flutter test`, `mitame compare` with an HTML report, `--update` into the baseline) and for the Android and iOS example projects through the same commands. The adapters are not yet published as packages. See the [roadmap](docs/roadmap.md).
+Early development, no release cut yet. The end-to-end flow (`mitame run` around the test command, `mitame compare` with an HTML report, `--update` into the baseline) works for the Flutter, Android, and iOS example projects in this repository. The adapters are not yet published as packages. See the [roadmap](docs/roadmap.md).
 
 ## Install
 
@@ -80,6 +80,20 @@ mitame init             # writes mitame.toml with [capture] command = ["flutter"
 mitame run              # capture, then compare; exit 0 clean, 1 differences, 2 error
 mitame review           # open the report in the browser; `mitame review <id>` jumps to one screenshot
 mitame compare --update # write the changed and added screenshots into .mitame/baseline/, then review the git diff
+```
+
+The commands map onto three directories. `run` is `capture` followed by `compare`; only `baseline/` is committed.
+
+```mermaid
+flowchart LR
+    subgraph run["mitame run"]
+        capture["mitame capture"] -->|"runs the test command with the adapter installed"| current[".mitame/current/ (ignored)"]
+        current --> compare["mitame compare"]
+    end
+    baseline[".mitame/baseline/ (committed)"] --> compare
+    compare -->|"result.json, diff images, index.html"| report[".mitame/report/ (ignored)"]
+    compare -->|"--update: changed and added screenshots"| baseline
+    report --> review["mitame review"]
 ```
 
 Add `.mitame/current/` and `.mitame/report/` to `.gitignore` and commit `.mitame/baseline/`. `mitame init` writes `mitame.toml` with the detected test command and the default settings; the command can also be given after `--`, as in `mitame run -- flutter test`. Existing goldens can be moved into the baseline by copying: the adapter writes exactly the bytes stock `flutter_test` would have written, and `flutter test --update-goldens` also writes into `.mitame/current/` once the adapter is installed.
