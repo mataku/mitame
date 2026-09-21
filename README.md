@@ -12,7 +12,7 @@ Flutter already has golden tests, and there are Dart packages that build on them
 - **Review instead of assert.** A visual difference does not fail `flutter test`. `mitame compare` reports every changed screenshot with a diff image, and `mitame approve` promotes the ones you accept. This is the workflow of hosted tools like Percy or reg-suit, without a hosted service and without a Node toolchain in a Flutter repository.
 - **A dependency that does not rot.** Dart golden packages pull in their own dependency trees and break, or are discontinued, when the SDK moves. The mitame adapter is a few hundred lines that depend on `flutter_test` alone, so the only thing it tracks is the Flutter SDK. The comparison logic lives in a single static binary that has no relationship to your `pubspec.lock`.
 - **Comparison outside the test process.** The test isolate only encodes and writes a PNG. Decoding, diffing, and reporting happen once per suite in Rust, in parallel across all screenshots, and never block a test file. When goldens match, this costs the same as stock. When every golden differs, which is the cross-platform CI case, the comparison overhead on top of a suite with no goldens drops from 2.9 s to 0.7 s for 200 phone-size goldens, and from 18.8 s to 3.8 s for 200 goldens at 3x device size (`mitame-bench`, 4 jobs, Apple Silicon). Rendering and PNG encoding inside `flutter test` are unchanged by mitame and remain the larger share of total time: the same 3x suite spends 4.2 s before any golden is compared.
-- **Baseline as data, not test fixtures.** Screenshots live under `.mitame/baseline/` instead of scattered `goldens/` directories next to tests, which makes them easy to put on git-lfs or an object store and to review as a set.
+- **Baseline as data, not test fixtures.** Screenshots live under `.mitame/baseline/` instead of scattered `goldens/` directories next to tests, which makes them easy to put on git-lfs and to review as a set.
 
 ## Status
 
@@ -103,10 +103,15 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] anti-aliasing detection
 - [x] `mitame test`: run `flutter test` then `compare` in one command for local feedback
 - [x] skip sidecar copy in `approve` when the PNG is unchanged
-- [ ] remote baseline storage (S3 / GCS) and PR comments
 - [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)
 - [ ] GitHub Action to install the binary
 - [ ] Windows builds
+
+### Integrations
+
+The binary stops at `report/`. Getting the report to reviewers is left to the CI system: upload `.mitame/report/` with `actions/upload-artifact`, and if a pull request comment is wanted, a separate `mitame-report` GitHub Action that reads `result.json` can post it. Baselines live in git (plain or git-lfs); the binary does not talk to object storage or the GitHub API.
+
+- [ ] `mitame-report` GitHub Action that summarizes `result.json` as a pull request comment
 
 ### Flutter
 
