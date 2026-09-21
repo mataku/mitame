@@ -1,9 +1,11 @@
 import Foundation
+import SwiftUI
 import UIKit
 
 public enum MitameError: Error, CustomStringConvertible {
     case noOutputDirectory
     case renderFailed
+    case noSize
     case collision(String)
 
     public var description: String {
@@ -12,6 +14,8 @@ public enum MitameError: Error, CustomStringConvertible {
             return "MITAME_OUTPUT_DIR is not set; pass it with TEST_RUNNER_MITAME_OUTPUT_DIR to xcodebuild"
         case .renderFailed:
             return "failed to render the view to an image"
+        case .noSize:
+            return "could not infer a size for the view; pass size: explicitly"
         case .collision(let id):
             return "Two captures resolved to the same mitame identity \"\(id)\" in this run. Use distinct names or pass group explicitly."
         }
@@ -36,7 +40,7 @@ public enum Mitame {
         scale: CGFloat? = nil,
         file: StaticString = #filePath
     ) throws -> URL {
-        let targetSize = size ?? (view.bounds.size == .zero ? view.intrinsicContentSize : view.bounds.size)
+        let targetSize = try size ?? inferredSize(of: view)
         let window = UIWindow(frame: CGRect(origin: .zero, size: targetSize))
         view.frame = window.bounds
         window.addSubview(view)
@@ -52,6 +56,54 @@ public enum Mitame {
         window.isHidden = true
         view.removeFromSuperview()
         return try write(image, name: name, variant: variant, group: group ?? fileGroup(file), scale: format.scale, displayName: name)
+    }
+
+    @MainActor
+    @discardableResult
+    public static func capture<Content: View>(
+        _ content: Content,
+        name: String,
+        variant: [String: String] = [:],
+        group: String? = nil,
+        size: CGSize? = nil,
+        scale: CGFloat? = nil,
+        file: StaticString = #filePath
+    ) throws -> URL {
+        let host = UIHostingController(rootView: content)
+        host.view.backgroundColor = .clear
+        if #available(iOS 16.4, *) {
+            host.safeAreaRegions = []
+        }
+        let targetSize: CGSize
+        if let size {
+            targetSize = size
+        } else {
+            let fitted = host.sizeThatFits(in: CGSize(width: defaultWidth, height: .greatestFiniteMagnitude))
+            guard fitted.width > 0, fitted.height > 0, fitted.height.isFinite else { throw MitameError.noSize }
+            targetSize = CGSize(width: fitted.width.rounded(.up), height: fitted.height.rounded(.up))
+        }
+        return try capture(host.view, name: name, variant: variant, group: group, size: targetSize, scale: scale, file: file)
+    }
+
+    @MainActor public static var defaultWidth: CGFloat = 390
+
+    @MainActor
+    static func inferredSize(of view: UIView) throws -> CGSize {
+        if view.bounds.size != .zero {
+            return view.bounds.size
+        }
+        let intrinsic = view.intrinsicContentSize
+        if intrinsic.width != UIView.noIntrinsicMetric, intrinsic.height != UIView.noIntrinsicMetric,
+           intrinsic.width > 0, intrinsic.height > 0 {
+            return intrinsic
+        }
+        let fitted = view.systemLayoutSizeFitting(
+            CGSize(width: defaultWidth, height: UIView.layoutFittingCompressedSize.height),
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        )
+        guard fitted.height > 0 else { throw MitameError.noSize }
+        return CGSize(width: defaultWidth, height: fitted.height.rounded(.up))
     }
 
     @discardableResult

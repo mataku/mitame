@@ -1,7 +1,7 @@
 {
   "capture" : "widget",
   "captured_at" : "2026-09-21T13:40:33Z",
-  "display_name" : "login_form",
+  "display_name" : "login_form_swiftui",
   "env" : {
     "ci" : false,
     "device" : "iPhone 16",
@@ -13,17 +13,17 @@
       "run_id" : "1789998025381-11534"
     }
   },
-  "group" : "login_form_tests",
-  "id" : "ios/login_form_tests/login_form__theme=light",
+  "group" : "login_form_swift_ui_tests",
+  "id" : "ios/login_form_swift_ui_tests/login_form_swiftui__theme=dark",
   "image" : {
-    "height" : 720,
+    "height" : 639,
     "scale" : 3,
-    "width" : 1080
+    "width" : 1170
   },
-  "name" : "login_form",
+  "name" : "login_form_swiftui",
   "platform" : "ios",
   "schema_version" : 1,
   "variant" : {
-    "theme" : "light"
+    "theme" : "dark"
   }
 }

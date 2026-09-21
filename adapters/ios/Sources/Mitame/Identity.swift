@@ -3,13 +3,16 @@ import Foundation
 enum Identity {
     static func normalize(_ raw: String) -> String {
         var value = ""
-        var previous: Character? = nil
-        for character in raw {
-            if character.isUppercase, let p = previous, p.isLowercase || p.isNumber {
-                value.append("_")
+        let characters = Array(raw)
+        for (index, character) in characters.enumerated() {
+            if character.isUppercase, index > 0 {
+                let previous = characters[index - 1]
+                let next: Character? = index + 1 < characters.count ? characters[index + 1] : nil
+                if previous.isLowercase || previous.isNumber || (previous.isUppercase && next?.isLowercase == true) {
+                    value.append("_")
+                }
             }
             value.append(character)
-            previous = character
         }
         value = value.lowercased()
         let safe = value.map { c -> Character in
