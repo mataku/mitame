@@ -76,7 +76,7 @@ root = ".mitame"
 [compare]
 threshold = 0.001          # max diff ratio that still counts as unchanged
 pixel_tolerance = 0.1      # per-pixel YIQ tolerance, as in pixelmatch
-anti_aliasing = true       # accepted, not yet applied
+anti_aliasing = true       # ignore pixels that only differ by anti-aliasing
 
 [policy]
 added = "warn"             # pass | warn | fail
@@ -88,7 +88,7 @@ match = "flutter/**/*__*theme=dark*"
 threshold = 0.01
 ```
 
-Rules use `globset` semantics and the last matching rule wins.
+Rules use `globset` semantics and the last matching rule wins. A rule may override `threshold`, `pixel_tolerance`, and `anti_aliasing`. Anti-aliasing detection follows pixelmatch: a differing pixel is ignored when it sits on an edge in one image and its darker or lighter neighbour has many identical siblings in both images. Ignored pixels are drawn in yellow in the diff image.
 
 ## Roadmap
 
@@ -100,7 +100,7 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] `approve` for all or selected identities
 - [x] `result.json` and diff images
 - [x] HTML report
-- [ ] anti-aliasing detection (config key accepted, not applied)
+- [x] anti-aliasing detection
 - [x] `mitame test`: run `flutter test` then `compare` in one command for local feedback
 - [x] skip sidecar copy in `approve` when the PNG is unchanged
 - [ ] remote baseline storage (S3 / GCS) and PR comments

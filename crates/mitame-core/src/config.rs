@@ -73,6 +73,8 @@ pub struct Rule {
     pub threshold: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pixel_tolerance: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anti_aliasing: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -91,6 +93,7 @@ pub struct Config {
 pub struct EffectiveCompare {
     pub threshold: f64,
     pub pixel_tolerance: f64,
+    pub anti_aliasing: bool,
 }
 
 impl Config {
@@ -122,6 +125,7 @@ impl Config {
         let mut out = EffectiveCompare {
             threshold: self.compare.threshold,
             pixel_tolerance: self.compare.pixel_tolerance,
+            anti_aliasing: self.compare.anti_aliasing,
         };
         for (matcher, rule) in matchers {
             if matcher.is_match(id) {
@@ -130,6 +134,9 @@ impl Config {
                 }
                 if let Some(p) = rule.pixel_tolerance {
                     out.pixel_tolerance = p;
+                }
+                if let Some(a) = rule.anti_aliasing {
+                    out.anti_aliasing = a;
                 }
             }
         }

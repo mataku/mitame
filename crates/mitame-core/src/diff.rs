@@ -1,10 +1,19 @@
 use image::{Rgba, RgbaImage};
 
 const YIQ_MAX_DELTA: f64 = 35215.0;
+const DIFF_COLOR: Rgba<u8> = Rgba([255, 0, 0, 255]);
+const AA_COLOR: Rgba<u8> = Rgba([255, 200, 0, 255]);
+
+#[derive(Debug, Clone, Copy)]
+pub struct DiffOptions {
+    pub pixel_tolerance: f64,
+    pub ignore_anti_aliasing: bool,
+}
 
 #[derive(Debug, Clone)]
 pub struct DiffResult {
     pub diff_pixels: u64,
+    pub anti_aliased_pixels: u64,
     pub total_pixels: u64,
     pub image: RgbaImage,
 }
@@ -19,30 +28,99 @@ impl DiffResult {
     }
 }
 
-pub fn diff_images(baseline: &RgbaImage, current: &RgbaImage, pixel_tolerance: f64) -> DiffResult {
+pub fn diff_images(baseline: &RgbaImage, current: &RgbaImage, options: DiffOptions) -> DiffResult {
     debug_assert_eq!(baseline.dimensions(), current.dimensions());
     let (width, height) = baseline.dimensions();
-    let max_delta = YIQ_MAX_DELTA * pixel_tolerance * pixel_tolerance;
+    let max_delta = YIQ_MAX_DELTA * options.pixel_tolerance * options.pixel_tolerance;
     let mut out = RgbaImage::new(width, height);
     let mut diff_pixels = 0u64;
+    let mut anti_aliased_pixels = 0u64;
     for (x, y, b) in baseline.enumerate_pixels() {
         let c = current.get_pixel(x, y);
-        if b == c {
+        if b == c || color_delta(b.0, c.0) <= max_delta {
             out.put_pixel(x, y, faded(b));
             continue;
         }
-        if color_delta(b.0, c.0) > max_delta {
-            diff_pixels += 1;
-            out.put_pixel(x, y, Rgba([255, 0, 0, 255]));
-        } else {
-            out.put_pixel(x, y, faded(b));
+        if options.ignore_anti_aliasing
+            && (is_anti_aliased(baseline, current, x, y)
+                || is_anti_aliased(current, baseline, x, y))
+        {
+            anti_aliased_pixels += 1;
+            out.put_pixel(x, y, AA_COLOR);
+            continue;
         }
+        diff_pixels += 1;
+        out.put_pixel(x, y, DIFF_COLOR);
     }
     DiffResult {
         diff_pixels,
+        anti_aliased_pixels,
         total_pixels: u64::from(width) * u64::from(height),
         image: out,
     }
+}
+
+fn is_anti_aliased(img: &RgbaImage, other: &RgbaImage, x1: u32, y1: u32) -> bool {
+    let (width, height) = img.dimensions();
+    let x0 = x1.saturating_sub(1);
+    let y0 = y1.saturating_sub(1);
+    let x2 = (x1 + 1).min(width - 1);
+    let y2 = (y1 + 1).min(height - 1);
+    let center = img.get_pixel(x1, y1).0;
+    let mut zeroes = u32::from(x1 == x0 || x1 == x2 || y1 == y0 || y1 == y2);
+    let mut min = 0.0f64;
+    let mut max = 0.0f64;
+    let mut min_pos = None;
+    let mut max_pos = None;
+    for x in x0..=x2 {
+        for y in y0..=y2 {
+            if x == x1 && y == y1 {
+                continue;
+            }
+            let delta = brightness_delta(center, img.get_pixel(x, y).0);
+            if delta == 0.0 {
+                zeroes += 1;
+                if zeroes > 2 {
+                    return false;
+                }
+            } else if delta < min {
+                min = delta;
+                min_pos = Some((x, y));
+            } else if delta > max {
+                max = delta;
+                max_pos = Some((x, y));
+            }
+        }
+    }
+    let (Some(min_pos), Some(max_pos)) = (min_pos, max_pos) else {
+        return false;
+    };
+    (has_many_siblings(img, min_pos) && has_many_siblings(other, min_pos))
+        || (has_many_siblings(img, max_pos) && has_many_siblings(other, max_pos))
+}
+
+fn has_many_siblings(img: &RgbaImage, (x1, y1): (u32, u32)) -> bool {
+    let (width, height) = img.dimensions();
+    let x0 = x1.saturating_sub(1);
+    let y0 = y1.saturating_sub(1);
+    let x2 = (x1 + 1).min(width - 1);
+    let y2 = (y1 + 1).min(height - 1);
+    let center = img.get_pixel(x1, y1);
+    let mut zeroes = u32::from(x1 == x0 || x1 == x2 || y1 == y0 || y1 == y2);
+    for x in x0..=x2 {
+        for y in y0..=y2 {
+            if x == x1 && y == y1 {
+                continue;
+            }
+            if img.get_pixel(x, y) == center {
+                zeroes += 1;
+                if zeroes > 2 {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 pub fn color_delta(a: [u8; 4], b: [u8; 4]) -> f64 {
@@ -55,6 +133,15 @@ pub fn color_delta(a: [u8; 4], b: [u8; 4]) -> f64 {
     let di = rgb2i(r1, g1, b1) - rgb2i(r2, g2, b2);
     let dq = rgb2q(r1, g1, b1) - rgb2q(r2, g2, b2);
     0.5053 * dy * dy + 0.299 * di * di + 0.1957 * dq * dq
+}
+
+fn brightness_delta(a: [u8; 4], b: [u8; 4]) -> f64 {
+    if a == b {
+        return 0.0;
+    }
+    let (r1, g1, b1) = blend_white(a);
+    let (r2, g2, b2) = blend_white(b);
+    rgb2y(r1, g1, b1) - rgb2y(r2, g2, b2)
 }
 
 fn blend_white(p: [u8; 4]) -> (f64, f64, f64) {
@@ -86,6 +173,15 @@ fn faded(p: &Rgba<u8>) -> Rgba<u8> {
 mod tests {
     use super::*;
 
+    const STRICT: DiffOptions = DiffOptions {
+        pixel_tolerance: 0.1,
+        ignore_anti_aliasing: false,
+    };
+    const LENIENT: DiffOptions = DiffOptions {
+        pixel_tolerance: 0.1,
+        ignore_anti_aliasing: true,
+    };
+
     #[test]
     fn identical_pixels_have_zero_delta() {
         assert_eq!(color_delta([1, 2, 3, 255], [1, 2, 3, 255]), 0.0);
@@ -111,9 +207,47 @@ mod tests {
         b.put_pixel(1, 0, Rgba([2, 1, 0, 255]));
         a.put_pixel(2, 0, Rgba([10, 10, 10, 255]));
         b.put_pixel(2, 0, Rgba([10, 10, 10, 255]));
-        let result = diff_images(&a, &b, 0.1);
+        let result = diff_images(&a, &b, STRICT);
         assert_eq!(result.diff_pixels, 1);
         assert_eq!(result.total_pixels, 4);
-        assert_eq!(result.image.get_pixel(0, 0), &Rgba([255, 0, 0, 255]));
+        assert_eq!(result.image.get_pixel(0, 0), &DIFF_COLOR);
+    }
+
+    fn edge_image(edge_gray: u8) -> RgbaImage {
+        let mut img = RgbaImage::new(5, 5);
+        for (x, _, p) in img.enumerate_pixels_mut() {
+            *p = match x {
+                0 | 1 => Rgba([0, 0, 0, 255]),
+                2 => Rgba([edge_gray, edge_gray, edge_gray, 255]),
+                _ => Rgba([255, 255, 255, 255]),
+            };
+        }
+        img
+    }
+
+    #[test]
+    fn anti_aliased_edge_is_ignored_when_enabled() {
+        let a = edge_image(128);
+        let b = edge_image(60);
+        let strict = diff_images(&a, &b, STRICT);
+        assert_eq!(strict.diff_pixels, 5);
+        let lenient = diff_images(&a, &b, LENIENT);
+        assert_eq!(lenient.diff_pixels, 0);
+        assert_eq!(lenient.anti_aliased_pixels, 5);
+        assert_eq!(lenient.image.get_pixel(2, 2), &AA_COLOR);
+    }
+
+    #[test]
+    fn solid_block_change_is_not_anti_aliasing() {
+        let a = RgbaImage::from_pixel(6, 6, Rgba([0, 0, 0, 255]));
+        let mut b = a.clone();
+        for x in 2..4 {
+            for y in 2..4 {
+                b.put_pixel(x, y, Rgba([255, 255, 255, 255]));
+            }
+        }
+        let lenient = diff_images(&a, &b, LENIENT);
+        assert_eq!(lenient.diff_pixels, 4);
+        assert_eq!(lenient.anti_aliased_pixels, 0);
     }
 }

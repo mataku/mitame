@@ -5,8 +5,8 @@ use image::RgbaImage;
 use mitame_contract::{Entry, Identity, ResultFile, Sidecar, Status, Summary, SCHEMA_VERSION};
 use rayon::prelude::*;
 
-use crate::config::{Config, Severity};
-use crate::diff::diff_images;
+use crate::config::{Config, EffectiveCompare, Severity};
+use crate::diff::{diff_images, DiffOptions};
 use crate::error::{Error, Result};
 use crate::layout::Layout;
 
@@ -30,7 +30,7 @@ pub fn compare(config: &Config, layout: &Layout) -> Result<CompareOutcome> {
         .par_iter()
         .map(|id| {
             let effective = config.effective(&matchers, &id.id());
-            compare_one(layout, id, effective.threshold, effective.pixel_tolerance)
+            compare_one(layout, id, effective)
         })
         .collect();
 
@@ -72,7 +72,7 @@ fn is_failure(config: &Config, status: Status) -> bool {
     }
 }
 
-fn compare_one(layout: &Layout, id: &Identity, threshold: f64, pixel_tolerance: f64) -> Entry {
+fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> Entry {
     let baseline = layout.baseline_png(id);
     let current = layout.current_png(id);
     let mut entry = Entry {
@@ -100,7 +100,7 @@ fn compare_one(layout: &Layout, id: &Identity, threshold: f64, pixel_tolerance: 
         }
         (true, true) => {}
     }
-    match compare_pair(layout, id, &baseline, &current, threshold, pixel_tolerance) {
+    match compare_pair(layout, id, &baseline, &current, effective) {
         Ok(filled) => filled(entry),
         Err(e) => {
             entry.status = Status::Error;
@@ -117,8 +117,7 @@ fn compare_pair(
     id: &Identity,
     baseline: &Path,
     current: &Path,
-    threshold: f64,
-    pixel_tolerance: f64,
+    effective: EffectiveCompare,
 ) -> Result<Fill> {
     let baseline_bytes = fs::read(baseline).map_err(|e| Error::io(baseline, e))?;
     let current_bytes = fs::read(current).map_err(|e| Error::io(current, e))?;
@@ -182,11 +181,15 @@ fn compare_pair(
         }
     }
 
-    let result = diff_images(&baseline_img, &current_img, pixel_tolerance);
+    let options = DiffOptions {
+        pixel_tolerance: effective.pixel_tolerance,
+        ignore_anti_aliasing: effective.anti_aliasing,
+    };
+    let result = diff_images(&baseline_img, &current_img, options);
     let ratio = result.ratio();
     let diff_path = layout.diff_png(id);
     let relative_diff = layout.relative(&diff_path);
-    let changed = ratio > threshold;
+    let changed = ratio > effective.threshold;
     if changed {
         if let Some(parent) = diff_path.parent() {
             fs::create_dir_all(parent).map_err(|e| Error::io(parent, e))?;
