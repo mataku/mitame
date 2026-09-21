@@ -157,7 +157,8 @@ fn compare_classifies_and_approve_promotes() {
     );
 
     let approved = approve(&layout, &[]).unwrap();
-    assert_eq!(approved.copied.len(), 5);
+    assert_eq!(approved.copied.len(), 4);
+    assert_eq!(approved.unchanged, vec!["flutter/a/same".to_string()]);
     assert_eq!(approved.deleted, vec!["flutter/a/gone".to_string()]);
     let outcome = compare(&config, &layout).unwrap();
     assert!(!outcome.failed);
@@ -235,6 +236,26 @@ fn sidecar_id_mismatch_is_error() {
     let entry = &outcome.result.results[0];
     assert_eq!(entry.status, Status::Error);
     assert!(entry.message.as_deref().unwrap().contains("does not match"));
+}
+
+#[test]
+fn approve_skips_identical_png_and_keeps_baseline_sidecar() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    let png = |side: &str| layout.root.join(side).join("default/flutter/a/x.png");
+    let json = |side: &str| layout.root.join(side).join("default/flutter/a/x.json");
+    write_png(&png("baseline"), 4, 4, [0, 0, 0, 255], &[]);
+    write_png(&png("current"), 4, 4, [0, 0, 0, 255], &[]);
+    fs::write(json("baseline"), "{\"captured_at\":\"old\"}").unwrap();
+    fs::write(json("current"), "{\"captured_at\":\"new\"}").unwrap();
+
+    let outcome = approve(&layout, &[]).unwrap();
+    assert_eq!(outcome.unchanged, vec!["flutter/a/x".to_string()]);
+    assert!(outcome.copied.is_empty());
+    assert_eq!(
+        fs::read_to_string(json("baseline")).unwrap(),
+        "{\"captured_at\":\"old\"}"
+    );
 }
 
 #[test]

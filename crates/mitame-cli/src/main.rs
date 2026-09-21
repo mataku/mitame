@@ -106,6 +106,12 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             for id in &outcome.deleted {
                 println!("deleted  {id}");
             }
+            if !outcome.unchanged.is_empty() {
+                println!(
+                    "unchanged {} (already in baseline)",
+                    outcome.unchanged.len()
+                );
+            }
             println!("baseline: {}", layout.baseline_dir().display());
             Ok(EXIT_OK)
         }

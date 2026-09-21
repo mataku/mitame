@@ -10,6 +10,7 @@ use crate::layout::Layout;
 pub struct ApproveOutcome {
     pub copied: Vec<String>,
     pub deleted: Vec<String>,
+    pub unchanged: Vec<String>,
 }
 
 pub fn approve(layout: &Layout, ids: &[String]) -> Result<ApproveOutcome> {
@@ -34,8 +35,15 @@ pub fn approve(layout: &Layout, ids: &[String]) -> Result<ApproveOutcome> {
             }
             continue;
         }
-        copy(&src_png, &dst_png)?;
         let src_sidecar = layout.current_sidecar(id);
+        if dst_png.exists()
+            && same_bytes(&src_png, &dst_png)?
+            && (dst_sidecar.exists() || !src_sidecar.exists())
+        {
+            outcome.unchanged.push(id.id());
+            continue;
+        }
+        copy(&src_png, &dst_png)?;
         if src_sidecar.exists() {
             copy(&src_sidecar, &dst_sidecar)?;
         } else {
@@ -64,4 +72,10 @@ fn remove_if_exists(path: &Path) -> Result<()> {
         remove(path)?;
     }
     Ok(())
+}
+
+fn same_bytes(a: &Path, b: &Path) -> Result<bool> {
+    let a_bytes = fs::read(a).map_err(|e| Error::io(a, e))?;
+    let b_bytes = fs::read(b).map_err(|e| Error::io(b, e))?;
+    Ok(a_bytes == b_bytes)
 }

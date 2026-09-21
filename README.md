@@ -102,7 +102,7 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] HTML report
 - [ ] anti-aliasing detection (config key accepted, not applied)
 - [x] `mitame test`: run `flutter test` then `compare` in one command for local feedback
-- [ ] skip sidecar copy in `approve` when the PNG is unchanged
+- [x] skip sidecar copy in `approve` when the PNG is unchanged
 - [ ] remote baseline storage (S3 / GCS) and PR comments
 - [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)
 - [ ] GitHub Action to install the binary
