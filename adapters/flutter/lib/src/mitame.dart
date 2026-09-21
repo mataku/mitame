@@ -12,6 +12,7 @@ class Mitame {
 
   static const String outputDirEnv = 'MITAME_OUTPUT_DIR';
   static const String profileEnv = 'MITAME_PROFILE';
+  static const String fontsEnv = 'MITAME_FONTS';
   static const String defaultProfile = 'default';
 
   static Future<void> install({bool loadFonts = false}) async {
@@ -37,7 +38,7 @@ class Mitame {
       outputDir: outputDir,
       profile: profile,
     );
-    if (loadFonts) {
+    if (loadFonts && env[fontsEnv] != 'ahem') {
       await loadAppFonts();
     }
   }
