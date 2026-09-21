@@ -3,7 +3,7 @@ use std::process::ExitCode;
 
 use clap::{Args, Parser, Subcommand};
 use mitame_contract::{ResultFile, Sidecar};
-use mitame_core::{approve, compare, Config, Layout};
+use mitame_core::{approve, compare, Config, Layout, CONFIG_TEMPLATE};
 
 const EXIT_OK: u8 = 0;
 const EXIT_DIFF: u8 = 1;
@@ -22,8 +22,8 @@ struct Cli {
 
 #[derive(Args)]
 struct Common {
-    #[arg(long, global = true, default_value = "mitame.toml")]
-    config: PathBuf,
+    #[arg(long, global = true)]
+    config: Option<PathBuf>,
     #[arg(long, global = true)]
     root: Option<PathBuf>,
     #[arg(long, global = true, env = "MITAME_PROFILE")]
@@ -32,6 +32,11 @@ struct Common {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(about = "Write a mitame.toml with the default settings into the current directory")]
+    Init {
+        #[arg(long)]
+        force: bool,
+    },
     #[command(about = "Compare current captures against the baseline and write the report")]
     Compare {
         #[command(flatten)]
@@ -88,8 +93,18 @@ fn main() -> ExitCode {
 fn run() -> Result<u8, Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     match cli.command {
+        Command::Init { force } => {
+            let path = Path::new("mitame.toml");
+            if path.exists() && !force {
+                return Err("mitame.toml already exists; pass --force to overwrite it".into());
+            }
+            std::fs::write(path, CONFIG_TEMPLATE)?;
+            println!("wrote {}", path.display());
+            println!("commit .mitame/baseline/ and add .mitame/current/ and .mitame/report/ to .gitignore");
+            Ok(EXIT_OK)
+        }
         Command::Compare { common } => {
-            let (config, layout) = resolve(&common)?;
+            let (config, layout, _) = resolve(&common)?;
             run_compare(&config, &layout)
         }
         Command::Test {
@@ -98,8 +113,8 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             keep_current,
             args,
         } => {
-            let (config, layout) = resolve(&common)?;
-            let flutter = resolve_flutter(flutter, Path::new("."));
+            let (config, layout, project) = resolve(&common)?;
+            let flutter = resolve_flutter(flutter, &project);
             let mut command = vec![flutter.to_string_lossy().into_owned(), "test".to_string()];
             command.extend(args);
             run_capture(&config, &layout, &command, keep_current)
@@ -109,11 +124,11 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             keep_current,
             command,
         } => {
-            let (config, layout) = resolve(&common)?;
+            let (config, layout, _) = resolve(&common)?;
             run_capture(&config, &layout, &command, keep_current)
         }
         Command::Report { common } => {
-            let (_, layout) = resolve(&common)?;
+            let (_, layout, _) = resolve(&common)?;
             let text = std::fs::read_to_string(layout.result_path())?;
             let result: ResultFile = serde_json::from_str(&text)?;
             let path = mitame_core::write_html(&layout, &result)?;
@@ -121,7 +136,7 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             Ok(EXIT_OK)
         }
         Command::Approve { common, ids } => {
-            let (_, layout) = resolve(&common)?;
+            let (_, layout, _) = resolve(&common)?;
             let outcome = approve(&layout, &ids)?;
             for id in &outcome.copied {
                 println!("approved {id}");
@@ -293,23 +308,92 @@ fn flutter_from_fvmrc(project: &Path, cache: Option<&Path>) -> Option<PathBuf> {
     candidate.exists().then_some(candidate)
 }
 
-fn resolve(common: &Common) -> Result<(Config, Layout), Box<dyn std::error::Error>> {
-    let config = Config::load_or_default(&common.config)?;
+fn find_project_dir(start: &Path) -> Option<PathBuf> {
+    if start.join("mitame.toml").is_file() || start.join(".mitame").is_dir() {
+        return Some(start.to_path_buf());
+    }
+    start
+        .ancestors()
+        .skip(1)
+        .find(|dir| {
+            dir.join("mitame.toml").is_file() || dir.join(".mitame").join("baseline").is_dir()
+        })
+        .map(Path::to_path_buf)
+}
+
+fn resolve(common: &Common) -> Result<(Config, Layout, PathBuf), Box<dyn std::error::Error>> {
+    let here = PathBuf::from(".");
+    let project = match &common.config {
+        Some(path) => path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .map(Path::to_path_buf)
+            .unwrap_or(here),
+        None => {
+            let cwd = std::env::current_dir()?;
+            match find_project_dir(&cwd) {
+                Some(dir) if dir != cwd => {
+                    println!("project: {}", dir.display());
+                    dir
+                }
+                _ => here,
+            }
+        }
+    };
+    let config_path = common
+        .config
+        .clone()
+        .unwrap_or_else(|| join_in(&project, "mitame.toml"));
+    let config = Config::load_or_default(&config_path)?;
     let root = common
         .root
         .clone()
-        .unwrap_or_else(|| PathBuf::from(&config.paths.root));
+        .unwrap_or_else(|| join_in(&project, &config.paths.root));
     let profile = common
         .profile
         .clone()
         .or_else(|| config.profile.clone())
         .unwrap_or_else(|| "default".to_string());
-    Ok((config, Layout::new(root, profile)))
+    Ok((config, Layout::new(root, profile), project))
+}
+
+fn join_in(project: &Path, child: &str) -> PathBuf {
+    if project == Path::new(".") {
+        PathBuf::from(child)
+    } else {
+        project.join(child)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn project_dir_is_the_nearest_ancestor_with_config_or_layout() {
+        let dir = tempfile::tempdir().unwrap();
+        let outer = dir.path().join("outer");
+        let inner = outer.join("inner");
+        let leaf = inner.join("a").join("b");
+        std::fs::create_dir_all(&leaf).unwrap();
+        std::fs::write(outer.join("mitame.toml"), "").unwrap();
+        assert_eq!(find_project_dir(&leaf), Some(outer.clone()));
+        std::fs::create_dir_all(inner.join(".mitame").join("report")).unwrap();
+        assert_eq!(find_project_dir(&leaf), Some(outer.clone()));
+        assert_eq!(find_project_dir(&inner), Some(inner.clone()));
+        std::fs::create_dir_all(inner.join(".mitame").join("baseline")).unwrap();
+        assert_eq!(find_project_dir(&leaf), Some(inner.clone()));
+        assert_eq!(find_project_dir(&outer), Some(outer));
+    }
+
+    #[test]
+    fn join_in_keeps_paths_bare_for_the_current_directory() {
+        assert_eq!(join_in(Path::new("."), ".mitame"), PathBuf::from(".mitame"));
+        assert_eq!(
+            join_in(Path::new("/p"), ".mitame"),
+            PathBuf::from("/p/.mitame")
+        );
+    }
 
     #[test]
     fn fvmrc_resolves_to_cached_version_only_when_present() {

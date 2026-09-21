@@ -81,7 +81,7 @@ open .mitame/report/index.html
 mitame approve        # promote accepted captures into .mitame/baseline/
 ```
 
-Add `.mitame/current/` and `.mitame/report/` to `.gitignore` and commit `.mitame/baseline/`. Existing goldens can be moved into the baseline by copying: the adapter writes exactly the bytes stock `flutter_test` would have written, and `flutter test --update-goldens` also writes into `.mitame/current/` once the adapter is installed.
+Add `.mitame/current/` and `.mitame/report/` to `.gitignore` and commit `.mitame/baseline/`. `mitame init` writes a `mitame.toml` holding the defaults when you want to tune them; without one the defaults apply. Existing goldens can be moved into the baseline by copying: the adapter writes exactly the bytes stock `flutter_test` would have written, and `flutter test --update-goldens` also writes into `.mitame/current/` once the adapter is installed.
 
 ## Examples
 

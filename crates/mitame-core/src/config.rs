@@ -93,6 +93,29 @@ pub struct Config {
     pub rules: Vec<Rule>,
 }
 
+pub const CONFIG_TEMPLATE: &str = r#"# mitame configuration. Every key is optional; the values below are the defaults.
+# See docs/configuration.md in https://github.com/mataku/mitame for details.
+
+[paths]
+root = ".mitame"
+
+[compare]
+threshold = 0.0            # allowed diff ratio (differing pixels / total pixels)
+max_diff_pixels = 0        # allowed differing pixels; the larger allowance applies
+pixel_tolerance = 0.1      # per-pixel YIQ tolerance, as in pixelmatch
+anti_aliasing = true       # ignore pixels that only differ by anti-aliasing
+
+[policy]
+added = "warn"             # pass | warn | fail
+removed = "warn"
+mismatch = "fail"
+
+# Per-identity overrides; the last matching rule wins.
+# [[rules]]
+# match = "flutter/**/*__*theme=dark*"
+# max_diff_pixels = 40
+"#;
+
 #[derive(Debug, Clone, Copy)]
 pub struct EffectiveCompare {
     pub threshold: f64,
@@ -234,5 +257,19 @@ mod tests {
         };
         assert!(!both.is_changed(20, 1000));
         assert!(both.is_changed(21, 1000));
+    }
+}
+
+#[cfg(test)]
+mod template_tests {
+    use super::*;
+
+    #[test]
+    fn template_parses_to_the_defaults() {
+        let parsed: Config = toml::from_str(CONFIG_TEMPLATE).unwrap();
+        assert_eq!(
+            toml::to_string(&parsed).unwrap(),
+            toml::to_string(&Config::default()).unwrap()
+        );
     }
 }

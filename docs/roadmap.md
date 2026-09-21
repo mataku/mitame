@@ -9,6 +9,8 @@
 - [x] anti-aliasing detection
 - [x] `mitame test` and `mitame run -- <command>`
 - [x] skip sidecar copy in `approve` when the PNG is unchanged
+- [x] `mitame init` and project root discovery from subdirectories
+- [x] sidecar `schema_version` check and `mitame_version` in `result.json`
 - [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)
 - [ ] Windows builds (in the release matrix, unverified)
 
