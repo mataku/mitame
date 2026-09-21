@@ -7,7 +7,7 @@
 └── report/{result.json,index.html,baseline/,current/,diff/}               # written by mitame compare, ignored
 ```
 
-The identity of a screenshot is `<platform>/<group>/<name>[__<variant>]`. Variants are `key=value` pairs, sorted by key and joined with `,`. Every component is restricted to `[a-z0-9_.-]`. The optional JSON sidecar next to each PNG carries descriptive metadata (dimensions, scale, SDK version, capture time); its schema is in `schema/sidecar.schema.json`, and the schema of `report/result.json` is in `schema/result.schema.json`.
+The identity of a screenshot is `<platform>/<group>/<name>[__<variant>]`. Variants are `key=value` pairs, sorted by key and joined with `,`. Every component is restricted to `[a-z0-9_.-]`. The optional JSON sidecar next to each PNG carries descriptive metadata (dimensions, scale, SDK version, capture time); its schema is in `schema/sidecar.schema.json`, and the schema of `report/result.json` is in `schema/result.schema.json`. Both carry a `schema_version`; a sidecar written for a different schema version than the binary understands is reported as `error` for that screenshot with a message naming both versions, since the binary is installed per machine while adapters are pinned per project. `result.json` also records the binary's version as `mitame_version`.
 
 Adapters read four environment variables: `MITAME_OUTPUT_DIR` (default `<cwd>/.mitame/current`), `MITAME_PROFILE` (default `default`), `MITAME_FONTS` (Flutter only; `ahem` skips font loading), and `MITAME_RUN_ID` (set by `mitame run` and `mitame test`, used to detect identity collisions within a run). Profiles separate baselines that differ systematically, such as macOS and Linux font rasterization.
 

@@ -60,6 +60,8 @@ pub struct Entry {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResultFile {
     pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mitame_version: Option<String>,
     pub profile: String,
     pub summary: Summary,
     pub results: Vec<Entry>,

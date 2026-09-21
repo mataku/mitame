@@ -45,6 +45,7 @@ pub fn compare(config: &Config, layout: &Layout) -> Result<CompareOutcome> {
 
     let result = ResultFile {
         schema_version: SCHEMA_VERSION,
+        mitame_version: Some(env!("CARGO_PKG_VERSION").to_string()),
         profile: layout.profile.clone(),
         summary,
         results: entries,
@@ -88,6 +89,10 @@ fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> E
     };
     if current.exists() {
         if let Ok(Some(sc)) = read_sidecar(&layout.current_sidecar(id)) {
+            if let Some(msg) = sidecar_problem("current", &sc, id) {
+                entry.message = Some(msg);
+                return entry;
+            }
             entry.captured_at = sc.captured_at;
         }
     }
@@ -159,12 +164,7 @@ fn compare_pair(
         ("current", &current_sidecar),
     ] {
         if let Some(sc) = sidecar {
-            if sc.id != id.id() {
-                let msg = format!(
-                    "{side} sidecar id `{}` does not match path identity `{}`",
-                    sc.id,
-                    id.id()
-                );
+            if let Some(msg) = sidecar_problem(side, sc, id) {
                 return Ok(Box::new(move |mut e| {
                     e.status = Status::Error;
                     e.message = Some(msg);
@@ -219,6 +219,24 @@ fn compare_pair(
         }
         e
     }))
+}
+
+fn sidecar_problem(side: &str, sc: &Sidecar, id: &Identity) -> Option<String> {
+    if sc.schema_version != SCHEMA_VERSION {
+        return Some(format!(
+            "{side} sidecar has schema_version {} but this mitame {} reads schema_version {SCHEMA_VERSION}; update the binary or the adapter",
+            sc.schema_version,
+            env!("CARGO_PKG_VERSION")
+        ));
+    }
+    if sc.id != id.id() {
+        return Some(format!(
+            "{side} sidecar id `{}` does not match path identity `{}`",
+            sc.id,
+            id.id()
+        ));
+    }
+    None
 }
 
 fn decode(path: &Path, bytes: &[u8]) -> Result<RgbaImage> {

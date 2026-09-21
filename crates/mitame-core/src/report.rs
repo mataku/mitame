@@ -218,10 +218,15 @@ pub fn render_at(result: &ResultFile, generated_at: &str) -> String {
     );
     let _ = write!(
         out,
-        "<h1>mitame report</h1><div class=\"meta\">profile <code>{}</code> · {} screenshots · generated <span class=\"generated\" data-utc=\"{2}\">{2}</span></div>",
+        "<h1>mitame report</h1><div class=\"meta\">profile <code>{}</code> · {} screenshots · generated <span class=\"generated\" data-utc=\"{2}\">{2}</span>{3}</div>",
         escape(&result.profile),
         result.results.len(),
-        escape(generated_at)
+        escape(generated_at),
+        result
+            .mitame_version
+            .as_deref()
+            .map(|v| format!(" · mitame {}", escape(v)))
+            .unwrap_or_default()
     );
     out.push_str("<div class=\"toolbar\"><input id=\"filter\" type=\"search\" placeholder=\"filter by id\" autocomplete=\"off\"><span class=\"detail\">click an image to open the viewer · <kbd>1</kbd> baseline <kbd>2</kbd> current <kbd>3</kbd> diff <kbd>4</kbd> onion · <kbd>←</kbd> <kbd>→</kbd> entries · <kbd>Esc</kbd> close</span></div>");
     out.push_str("<nav class=\"summary\">");
@@ -400,6 +405,7 @@ mod tests {
     fn renders_entries_with_paths_relative_to_report_dir() {
         let result = ResultFile {
             schema_version: SCHEMA_VERSION,
+            mitame_version: None,
             profile: "default".into(),
             summary: Summary {
                 changed: 1,

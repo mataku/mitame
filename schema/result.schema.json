@@ -9,6 +9,12 @@
     "summary"
   ],
   "properties": {
+    "mitame_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "profile": {
       "type": "string"
     },

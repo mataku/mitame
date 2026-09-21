@@ -253,6 +253,40 @@ fn sidecar_id_mismatch_is_error() {
 }
 
 #[test]
+fn sidecar_schema_version_mismatch_is_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    let config = Config::default();
+    write_png(
+        &layout.root.join("current/default/flutter/a/x.png"),
+        4,
+        4,
+        [0, 0, 0, 255],
+        &[],
+    );
+    let sidecar = r#"{"schema_version":99,"id":"flutter/a/x","platform":"flutter","capture":"widget","group":"a","name":"x","variant":{},"image":{"width":4,"height":4,"scale":1.0}}"#;
+    fs::write(
+        layout.root.join("current/default/flutter/a/x.json"),
+        sidecar,
+    )
+    .unwrap();
+
+    let outcome = compare(&config, &layout).unwrap();
+    assert!(outcome.errored);
+    let entry = &outcome.result.results[0];
+    assert_eq!(entry.status, Status::Error);
+    assert!(entry
+        .message
+        .as_deref()
+        .unwrap()
+        .contains("schema_version 99"));
+    assert_eq!(
+        outcome.result.mitame_version.as_deref(),
+        Some(env!("CARGO_PKG_VERSION"))
+    );
+}
+
+#[test]
 fn approve_skips_identical_png_and_keeps_baseline_sidecar() {
     let dir = tempfile::tempdir().unwrap();
     let layout = Layout::new(dir.path().join(".mitame"), "default");
