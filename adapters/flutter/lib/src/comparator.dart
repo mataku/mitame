@@ -12,6 +12,7 @@ class MitameComparator extends GoldenFileComparator {
     required this.testRoot,
     required this.outputDir,
     required this.profile,
+    this.groupFromGoldenUri = true,
   });
 
   static const int schemaVersion = 1;
@@ -21,6 +22,7 @@ class MitameComparator extends GoldenFileComparator {
   final Uri testRoot;
   final Directory outputDir;
   final String profile;
+  final bool groupFromGoldenUri;
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
@@ -65,7 +67,10 @@ class MitameComparator extends GoldenFileComparator {
         : decodeVariant(stem.substring(split + 2));
     return MitameIdentity(
       platform: platform,
-      group: [...testDir, ...goldenSegments].map(normalizeComponent).toList(),
+      group: [
+        ...testDir,
+        if (groupFromGoldenUri) ...goldenSegments,
+      ].map(normalizeComponent).toList(),
       name: normalizeComponent(rawName),
       variant: {
         for (final entry in rawVariant.entries)

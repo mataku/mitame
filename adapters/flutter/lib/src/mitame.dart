@@ -15,7 +15,10 @@ class Mitame {
   static const String fontsEnv = 'MITAME_FONTS';
   static const String defaultProfile = 'default';
 
-  static Future<void> install({bool loadFonts = false}) async {
+  static Future<void> install({
+    bool loadFonts = false,
+    bool groupFromGoldenUri = true,
+  }) async {
     final current = goldenFileComparator;
     if (current is! LocalFileComparator) {
       throw StateError(
@@ -37,6 +40,7 @@ class Mitame {
       testRoot: testRoot.uri,
       outputDir: outputDir,
       profile: profile,
+      groupFromGoldenUri: groupFromGoldenUri,
     );
     if (loadFonts && env[fontsEnv] != 'ahem') {
       await loadAppFonts();

@@ -45,7 +45,9 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 }
 ```
 
-`loadFonts: true` loads the fonts declared in the package and the SDK's Roboto, so goldens render real glyphs instead of the Ahem placeholder font. Setting `MITAME_FONTS=ahem` in the environment skips font loading for that run, which renders text as Ahem boxes.
+`loadFonts: true` loads the fonts declared in the package and the SDK's Roboto, so goldens render real glyphs instead of the Ahem placeholder font. Setting `MITAME_FONTS=ahem` in the environment skips font loading for that run, which renders text as Ahem boxes. Ahem glyphs are wider than real ones and can overflow tight layouts, and packages that load fonts themselves (alchemist does) are unaffected by the switch.
+
+`groupFromGoldenUri: false` drops the golden file's directory from the identity, so `matchesGoldenFile('goldens/login.png')` in `test/ui/auth/` becomes `flutter/ui/auth/login` instead of `flutter/ui/auth/goldens/login`. Two golden directories in the same test directory with the same file names would then collide, which is why the default keeps the directory.
 
 ### Cross-platform baselines
 
@@ -76,6 +78,8 @@ flutter test
 mitame compare      # exit 0: no differences, 1: differences or policy failure, 2: error
 mitame approve      # promote current into baseline
 ```
+
+Once the adapter is installed, `flutter test --update-goldens` also writes into `.mitame/current/` instead of the golden files next to the tests. Existing goldens can be moved into the baseline by copying: the adapter writes exactly the bytes stock `flutter_test` would have written.
 
 `mitame test [flutter test args]` runs both steps in one command for local feedback: it sets the output directory and profile, runs `flutter test`, then compares. mitame's own flags such as `--profile` go before the `flutter test` arguments. The Flutter binary is `--flutter <path>`, then `MITAME_FLUTTER`, then `.fvm/flutter_sdk/bin/flutter` when the project uses fvm, then `flutter` on `PATH`. When a test fails, the comparison still runs on the captures that succeeded and the report is written, but the exit code is 2. `compare` writes `.mitame/report/index.html` alongside `result.json`. The report directory is self-contained (it holds copies of the baseline and current images it shows), so uploading `.mitame/report/` as a CI artifact is enough to review a run. `mitame report` regenerates the HTML from an existing `result.json`.
 
@@ -117,6 +121,8 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] `approve` for all or selected identities
 - [x] `result.json` and diff images
 - [x] HTML report
+- [ ] report: zoom, baseline/current overlay, filtering by id
+- [ ] `mitame import` to move existing `test/**/goldens/*.png` into the baseline
 - [x] anti-aliasing detection
 - [x] `mitame test`: run `flutter test` then `compare` in one command for local feedback
 - [x] skip sidecar copy in `approve` when the PNG is unchanged
