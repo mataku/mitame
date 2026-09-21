@@ -189,7 +189,7 @@ fn compare_pair(
     let ratio = result.ratio();
     let diff_path = layout.diff_png(id);
     let relative_diff = layout.relative(&diff_path);
-    let changed = ratio > effective.threshold;
+    let changed = effective.is_changed(result.diff_pixels, result.total_pixels);
     if changed {
         if let Some(parent) = diff_path.parent() {
             fs::create_dir_all(parent).map_err(|e| Error::io(parent, e))?;

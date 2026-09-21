@@ -32,6 +32,7 @@ impl Default for Paths {
 pub struct CompareConfig {
     pub algorithm: String,
     pub threshold: f64,
+    pub max_diff_pixels: u64,
     pub pixel_tolerance: f64,
     pub anti_aliasing: bool,
 }
@@ -40,7 +41,8 @@ impl Default for CompareConfig {
     fn default() -> Self {
         CompareConfig {
             algorithm: "pixel".to_string(),
-            threshold: 0.001,
+            threshold: 0.0,
+            max_diff_pixels: 0,
             pixel_tolerance: 0.1,
             anti_aliasing: true,
         }
@@ -72,6 +74,8 @@ pub struct Rule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub threshold: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_diff_pixels: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pixel_tolerance: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anti_aliasing: Option<bool>,
@@ -92,8 +96,19 @@ pub struct Config {
 #[derive(Debug, Clone, Copy)]
 pub struct EffectiveCompare {
     pub threshold: f64,
+    pub max_diff_pixels: u64,
     pub pixel_tolerance: f64,
     pub anti_aliasing: bool,
+}
+
+impl EffectiveCompare {
+    pub fn allowance(&self, total_pixels: u64) -> f64 {
+        (self.max_diff_pixels as f64).max(self.threshold * total_pixels as f64)
+    }
+
+    pub fn is_changed(&self, diff_pixels: u64, total_pixels: u64) -> bool {
+        diff_pixels as f64 > self.allowance(total_pixels)
+    }
 }
 
 impl Config {
@@ -124,6 +139,7 @@ impl Config {
     pub fn effective(&self, matchers: &[(GlobMatcher, &Rule)], id: &str) -> EffectiveCompare {
         let mut out = EffectiveCompare {
             threshold: self.compare.threshold,
+            max_diff_pixels: self.compare.max_diff_pixels,
             pixel_tolerance: self.compare.pixel_tolerance,
             anti_aliasing: self.compare.anti_aliasing,
         };
@@ -131,6 +147,9 @@ impl Config {
             if matcher.is_match(id) {
                 if let Some(t) = rule.threshold {
                     out.threshold = t;
+                }
+                if let Some(m) = rule.max_diff_pixels {
+                    out.max_diff_pixels = m;
                 }
                 if let Some(p) = rule.pixel_tolerance {
                     out.pixel_tolerance = p;
@@ -182,5 +201,38 @@ mod tests {
         assert_eq!(config.paths.root, ".mitame");
         assert_eq!(config.policy.mismatch, Severity::Fail);
         assert!(config.compare.anti_aliasing);
+        assert_eq!(config.compare.threshold, 0.0);
+        assert_eq!(config.compare.max_diff_pixels, 0);
+    }
+
+    #[test]
+    fn allowance_is_the_larger_of_pixels_and_ratio() {
+        let strict = EffectiveCompare {
+            threshold: 0.0,
+            max_diff_pixels: 0,
+            pixel_tolerance: 0.1,
+            anti_aliasing: true,
+        };
+        assert!(strict.is_changed(1, 1000));
+        assert!(!strict.is_changed(0, 1000));
+        let pixels = EffectiveCompare {
+            max_diff_pixels: 20,
+            ..strict
+        };
+        assert!(!pixels.is_changed(20, 1000));
+        assert!(pixels.is_changed(21, 1000));
+        let ratio = EffectiveCompare {
+            threshold: 0.05,
+            ..strict
+        };
+        assert!(!ratio.is_changed(50, 1000));
+        assert!(ratio.is_changed(51, 1000));
+        let both = EffectiveCompare {
+            threshold: 0.001,
+            max_diff_pixels: 20,
+            ..strict
+        };
+        assert!(!both.is_changed(20, 1000));
+        assert!(both.is_changed(21, 1000));
     }
 }

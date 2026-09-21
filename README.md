@@ -8,7 +8,7 @@ The Flutter adapter depends on `flutter_test` from the SDK and on no third-party
 
 Flutter already has golden tests, and there are Dart packages that build on them. mitame exists because of what those leave unsolved.
 
-- **Real text on CI.** Stock goldens require an exact pixel match, and macOS and Linux rasterize fonts differently, so goldens rendered locally fail on CI. Existing packages work around this by rendering text as Ahem placeholder boxes on CI, which means CI never checks real text. mitame compares with a per-pixel tolerance and keeps a separate baseline per profile, so CI verifies the same glyphs a user sees.
+- **Real text, without the noise.** Stock goldens require an exact byte match, so a Flutter upgrade that moves a few pixels of anti-aliasing fails every golden (a real project saw all 24 goldens fail with 8 to 9 differing pixels each). Existing packages work around platform differences by rendering text as Ahem placeholder boxes on CI, which means CI never checks real text. mitame's per-pixel tolerance and anti-aliasing detection absorb that noise (the same 24 goldens compare with 0 differing pixels), keeps a separate baseline per rendering platform, and counts every remaining pixel by default so a one-word change is never hidden.
 - **Review instead of assert.** A visual difference does not fail `flutter test`. `mitame compare` reports every changed screenshot with a diff image, and `mitame approve` promotes the ones you accept. This is the workflow of hosted tools like Percy or reg-suit, without a hosted service and without a Node toolchain in a Flutter repository.
 - **A dependency that does not rot.** Dart golden packages pull in their own dependency trees and break, or are discontinued, when the SDK moves. The mitame adapter is a few hundred lines that depend on `flutter_test` alone, so the only thing it tracks is the Flutter SDK. The comparison logic lives in a single static binary that has no relationship to your `pubspec.lock`.
 - **Comparison outside the test process.** The test isolate only encodes and writes a PNG. Decoding, diffing, and reporting happen once per suite in Rust, in parallel across all screenshots, and never block a test file. When goldens match, this costs the same as stock. When every golden differs, which is the cross-platform CI case, the comparison overhead on top of a suite with no goldens drops from 2.9 s to 0.7 s for 200 phone-size goldens, and from 18.8 s to 3.8 s for 200 goldens at 3x device size (`mitame-bench`, 4 jobs, Apple Silicon). Rendering and PNG encoding inside `flutter test` are unchanged by mitame and remain the larger share of total time: the same 3x suite spends 4.2 s before any golden is compared.
@@ -88,7 +88,8 @@ mitame approve      # promote current into baseline
 root = ".mitame"
 
 [compare]
-threshold = 0.001          # max diff ratio that still counts as unchanged
+threshold = 0.0            # allowed diff ratio (differing pixels / total pixels)
+max_diff_pixels = 0        # allowed differing pixels, whichever allowance is larger applies
 pixel_tolerance = 0.1      # per-pixel YIQ tolerance, as in pixelmatch
 anti_aliasing = true       # ignore pixels that only differ by anti-aliasing
 
@@ -102,7 +103,9 @@ match = "flutter/**/*__*theme=dark*"
 threshold = 0.01
 ```
 
-Rules use `globset` semantics and the last matching rule wins. A rule may override `threshold`, `pixel_tolerance`, and `anti_aliasing`. Anti-aliasing detection follows pixelmatch: a differing pixel is ignored when it sits on an edge in one image and its darker or lighter neighbour has many identical siblings in both images. Ignored pixels are drawn in yellow in the diff image.
+Rules use `globset` semantics and the last matching rule wins. A rule may override `threshold`, `max_diff_pixels`, `pixel_tolerance`, and `anti_aliasing`.
+
+The default is strict on purpose: `pixel_tolerance` and `anti_aliasing` already remove rendering noise (re-running an unchanged suite on the same machine yields 0 differing pixels), and a ratio threshold hides real changes on full-screen goldens, where a one-word change is 200 to 300 pixels out of 400,000. Raise `max_diff_pixels` or `threshold` only for identities that need it. A screenshot is `changed` when its differing pixels exceed the larger of `max_diff_pixels` and `threshold` × total pixels. Anti-aliasing detection follows pixelmatch: a differing pixel is ignored when it sits on an edge in one image and its darker or lighter neighbour has many identical siblings in both images. Ignored pixels are drawn in yellow in the diff image.
 
 ## Roadmap
 
