@@ -11,7 +11,7 @@ Flutter already has golden tests, and there are Dart packages that build on them
 - **Real text on CI.** Stock goldens require an exact pixel match, and macOS and Linux rasterize fonts differently, so goldens rendered locally fail on CI. Existing packages work around this by rendering text as Ahem placeholder boxes on CI, which means CI never checks real text. mitame compares with a per-pixel tolerance and keeps a separate baseline per profile, so CI verifies the same glyphs a user sees.
 - **Review instead of assert.** A visual difference does not fail `flutter test`. `mitame compare` reports every changed screenshot with a diff image, and `mitame approve` promotes the ones you accept. This is the workflow of hosted tools like Percy or reg-suit, without a hosted service and without a Node toolchain in a Flutter repository.
 - **A dependency that does not rot.** Dart golden packages pull in their own dependency trees and break, or are discontinued, when the SDK moves. The mitame adapter is a few hundred lines that depend on `flutter_test` alone, so the only thing it tracks is the Flutter SDK. The comparison logic lives in a single static binary that has no relationship to your `pubspec.lock`.
-- **Comparison outside the test process.** The test isolate only encodes and writes a PNG. Decoding, diffing, and reporting happen once per suite in Rust, in parallel across all screenshots, and never block a test file.
+- **Comparison outside the test process.** The test isolate only encodes and writes a PNG. Decoding, diffing, and reporting happen once per suite in Rust, in parallel across all screenshots, and never block a test file. When goldens match, this costs the same as stock. When every golden differs, which is the cross-platform CI case, the comparison overhead on top of a suite with no goldens drops from 2.9 s to 0.7 s for 200 phone-size goldens, and from 18.8 s to 3.8 s for 200 goldens at 3x device size (`mitame-bench`, 4 jobs, Apple Silicon). Rendering and PNG encoding inside `flutter test` are unchanged by mitame and remain the larger share of total time: the same 3x suite spends 4.2 s before any golden is compared.
 - **Baseline as data, not test fixtures.** Screenshots live under `.mitame/baseline/` instead of scattered `goldens/` directories next to tests, which makes them easy to put on git-lfs or an object store and to review as a set.
 
 ## Status
@@ -113,7 +113,7 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] `mitame_flutter` adapter depending on `flutter_test` only
 - [x] real fonts via `FontManifest.json` and the SDK's Roboto
 - [ ] publish to pub.dev (needs automated publishing set up on pub.dev)
-- [ ] benchmark against stock `LocalFileComparator`
+- [x] benchmark against stock `LocalFileComparator` (`mitame-bench`)
 - [ ] adapter for `@Preview`-based capture output
 
 ### iOS
@@ -167,4 +167,4 @@ cargo test
 cd adapters/flutter/example && flutter test && ../../../target/debug/mitame compare
 ```
 
-The workspace pins its Rust toolchain in `rust-toolchain.toml`.
+The workspace pins its Rust toolchain in `rust-toolchain.toml`. `bench/README.md` describes the benchmark harness that produced the numbers above.

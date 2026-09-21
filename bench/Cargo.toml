@@ -1,0 +1,12 @@
+[package]
+name = "mitame-bench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Benchmark harness comparing mitame against flutter_test's LocalFileComparator"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde_json.workspace = true

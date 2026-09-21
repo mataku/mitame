@@ -1,0 +1,16 @@
+name: mitame_bench
+publish_to: none
+version: 0.0.0
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mitame_flutter:
+    path: __ADAPTER_PATH__

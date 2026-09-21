@@ -357,6 +357,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "mitame-bench"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "serde_json",
+]
+
+[[package]]
 name = "mitame-cli"
 version = "0.1.0"
 dependencies = [

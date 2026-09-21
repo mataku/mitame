@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/mitame-contract", "crates/mitame-core", "crates/mitame-cli"]
+members = ["crates/mitame-contract", "crates/mitame-core", "crates/mitame-cli", "bench"]
 
 [workspace.package]
 version = "0.1.0"
