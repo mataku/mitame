@@ -16,12 +16,11 @@ Delete `.dart_tool/` before switching between the container and the host, since 
 
 ## Workflow
 
-A minimal GitHub Actions job installs the binary, captures with the `linux` profile, compares, uploads the report, and posts the summary to the pull request. Building from source with `cargo install` works today but takes a few minutes per run; a lighter install step from the release archives is TBA once the first release exists.
+A minimal GitHub Actions job installs the binary, captures with the `linux` profile, compares, and uploads the report. Building from source with `cargo install` works today but takes a few minutes per run; a lighter install step from the release archives is TBA once the first release exists.
 
 ```yaml
 permissions:
   contents: read
-  pull-requests: write
 
 steps:
   - run: cargo install --git https://github.com/mataku/mitame mitame-cli
@@ -34,10 +33,8 @@ steps:
     with:
       name: mitame-report
       path: .mitame/report
-  - uses: mataku/mitame-report@v1
-    if: always() && github.event_name == 'pull_request'
 ```
 
-`compare` exits 1 when anything changed, which fails the job; the uploaded `report/` opens as a standalone page. [mitame-report](https://github.com/mataku/mitame-report) is a separate composite action, not yet published, that reads `result.json` and keeps one sticky comment per job up to date, linking to the workflow run for the images. The binary itself stops at `report/`: it does not talk to object storage or the GitHub API, and baselines live in git (plain or git-lfs). Local runs keep using the `default` profile and never compare against the Linux baseline.
+`compare` exits 1 when anything changed, which fails the job; the uploaded `report/` opens as a standalone page. A pull request comment that summarizes `result.json` is planned as a separate composite action and will be documented here once it is published. The binary itself stops at `report/`: it does not talk to object storage or the GitHub API, and baselines live in git (plain or git-lfs). Local runs keep using the `default` profile and never compare against the Linux baseline.
 
 This repository's `ci.yml` runs the same shape for the Android example (Robolectric on `ubuntu-latest`, profile `linux`) and the iOS example (simulator on `macos-26`, profile `ci-macos`); with no committed baseline for those profiles they report every screenshot as `added`, which validates the pipeline without guarding regressions.
