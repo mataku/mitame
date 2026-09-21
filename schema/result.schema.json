@@ -41,6 +41,12 @@
             "null"
           ]
         },
+        "captured_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "current": {
           "type": [
             "string",

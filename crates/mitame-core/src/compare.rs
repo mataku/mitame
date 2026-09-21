@@ -84,7 +84,13 @@ fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> E
         current: current.exists().then(|| layout.relative(&current)),
         diff: None,
         message: None,
+        captured_at: None,
     };
+    if current.exists() {
+        if let Ok(Some(sc)) = read_sidecar(&layout.current_sidecar(id)) {
+            entry.captured_at = sc.captured_at;
+        }
+    }
     match (baseline.exists(), current.exists()) {
         (false, false) => {
             entry.message = Some("neither baseline nor current exists".to_string());

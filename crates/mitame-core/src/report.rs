@@ -36,6 +36,12 @@ img { max-width: 100%; height: auto; border: 1px solid var(--line); background:
 "#;
 
 const SCRIPT: &str = r#"
+function localize(el, prefix) {
+  var d = new Date(el.dataset.utc.replace(' UTC', 'Z').replace(' ', 'T'));
+  if (!isNaN(d)) { el.textContent = prefix + d.toLocaleString(); el.title = el.dataset.utc; }
+}
+document.querySelectorAll('.generated').forEach(function (el) { localize(el, ''); });
+document.querySelectorAll('.captured').forEach(function (el) { localize(el, 'captured '); });
 document.querySelectorAll('.summary a').forEach(function (a) {
   a.addEventListener('click', function (e) {
     e.preventDefault();
@@ -115,7 +121,7 @@ pub fn render_at(result: &ResultFile, generated_at: &str) -> String {
     );
     let _ = write!(
         out,
-        "<h1>mitame report</h1><div class=\"meta\">profile <code>{}</code> · {} screenshots · generated {}</div>",
+        "<h1>mitame report</h1><div class=\"meta\">profile <code>{}</code> · {} screenshots · generated <span class=\"generated\" data-utc=\"{2}\">{2}</span></div>",
         escape(&result.profile),
         result.results.len(),
         escape(generated_at)
@@ -137,9 +143,23 @@ pub fn render_at(result: &ResultFile, generated_at: &str) -> String {
                 .iter()
                 .all(|e| e.status != Status::Unchanged || e.diff_pixels.unwrap_or(0) == 0);
         let off = if all_hidden { " class=\"off\"" } else { "" };
+        let with_diffs = if status == Status::Unchanged {
+            result
+                .results
+                .iter()
+                .filter(|e| e.status == Status::Unchanged && e.diff_pixels.unwrap_or(0) > 0)
+                .count()
+        } else {
+            0
+        };
+        let suffix = if with_diffs > 0 {
+            format!(" <small>({with_diffs} with diffs)</small>")
+        } else {
+            String::new()
+        };
         let _ = write!(
             out,
-            "<a href=\"#{name}\" data-status=\"{name}\"{off}><b>{count}</b>{name}</a>"
+            "<a href=\"#{name}\" data-status=\"{name}\"{off}><b>{count}</b>{name}{suffix}</a>"
         );
     }
     out.push_str("</nav>");
@@ -202,6 +222,13 @@ fn render_entry(out: &mut String, entry: &Entry) {
     }
     if let Some(msg) = &entry.message {
         let _ = write!(out, "<span class=\"detail\">{}</span>", escape(msg));
+    }
+    if let Some(at) = &entry.captured_at {
+        let _ = write!(
+            out,
+            "<span class=\"detail captured\" data-utc=\"{0}\">captured {0}</span>",
+            escape(at)
+        );
     }
     out.push_str("</header>");
     if shows_images(entry) {
@@ -287,6 +314,7 @@ mod tests {
                     current: Some("current/default/flutter/a/x__theme=dark.png".into()),
                     diff: Some("report/diff/flutter/a/x__theme=dark.png".into()),
                     message: None,
+                    captured_at: Some("2026-09-21T10:00:00Z".into()),
                 },
                 Entry {
                     id: "flutter/a/<y>".into(),
@@ -297,6 +325,7 @@ mod tests {
                     current: None,
                     diff: None,
                     message: None,
+                    captured_at: None,
                 },
             ],
         };
@@ -307,6 +336,7 @@ mod tests {
         assert!(html.contains("src=\"diff/flutter/a/x__theme=dark.png\""));
         assert!(html.contains("25.000% · 4 px"));
         assert!(html.contains("0.000% · 0 px"));
+        assert!(html.contains("captured 2026-09-21T10:00:00Z"));
         assert!(html.contains("flutter/a/&lt;y&gt;"));
         assert!(!html.contains("<y>"));
     }

@@ -15,6 +15,7 @@ pub struct DiffResult {
     pub diff_pixels: u64,
     pub anti_aliased_pixels: u64,
     pub total_pixels: u64,
+    pub bounds: Option<(u32, u32, u32, u32)>,
     pub image: RgbaImage,
 }
 
@@ -35,6 +36,7 @@ pub fn diff_images(baseline: &RgbaImage, current: &RgbaImage, options: DiffOptio
     let mut out = RgbaImage::new(width, height);
     let mut diff_pixels = 0u64;
     let mut anti_aliased_pixels = 0u64;
+    let mut bounds: Option<(u32, u32, u32, u32)> = None;
     for (x, y, b) in baseline.enumerate_pixels() {
         let c = current.get_pixel(x, y);
         if b == c || color_delta(b.0, c.0) <= max_delta {
@@ -50,14 +52,52 @@ pub fn diff_images(baseline: &RgbaImage, current: &RgbaImage, options: DiffOptio
             continue;
         }
         diff_pixels += 1;
+        bounds = Some(match bounds {
+            None => (x, y, x, y),
+            Some((x0, y0, x1, y1)) => (x0.min(x), y0.min(y), x1.max(x), y1.max(y)),
+        });
         out.put_pixel(x, y, DIFF_COLOR);
+    }
+    if let Some(b) = bounds {
+        draw_bounds(&mut out, b);
     }
     DiffResult {
         diff_pixels,
         anti_aliased_pixels,
         total_pixels: u64::from(width) * u64::from(height),
+        bounds,
         image: out,
     }
+}
+
+const BOUNDS_COLOR: Rgba<u8> = Rgba([255, 0, 0, 160]);
+const BOUNDS_PADDING: u32 = 6;
+
+fn draw_bounds(img: &mut RgbaImage, (x0, y0, x1, y1): (u32, u32, u32, u32)) {
+    let (w, h) = img.dimensions();
+    let left = x0.saturating_sub(BOUNDS_PADDING);
+    let top = y0.saturating_sub(BOUNDS_PADDING);
+    let right = (x1 + BOUNDS_PADDING).min(w - 1);
+    let bottom = (y1 + BOUNDS_PADDING).min(h - 1);
+    for x in left..=right {
+        for y in [top, bottom] {
+            blend(img, x, y);
+        }
+    }
+    for y in top..=bottom {
+        for x in [left, right] {
+            blend(img, x, y);
+        }
+    }
+}
+
+fn blend(img: &mut RgbaImage, x: u32, y: u32) {
+    let p = img.get_pixel_mut(x, y);
+    let a = f64::from(BOUNDS_COLOR[3]) / 255.0;
+    for i in 0..3 {
+        p[i] = (f64::from(p[i]) * (1.0 - a) + f64::from(BOUNDS_COLOR[i]) * a).round() as u8;
+    }
+    p[3] = 255;
 }
 
 fn is_anti_aliased(img: &RgbaImage, other: &RgbaImage, x1: u32, y1: u32) -> bool {
@@ -211,6 +251,7 @@ mod tests {
         assert_eq!(result.diff_pixels, 1);
         assert_eq!(result.total_pixels, 4);
         assert_eq!(result.image.get_pixel(0, 0), &DIFF_COLOR);
+        assert_eq!(result.bounds, Some((0, 0, 0, 0)));
     }
 
     fn edge_image(edge_gray: u8) -> RgbaImage {
@@ -249,5 +290,23 @@ mod tests {
         let lenient = diff_images(&a, &b, LENIENT);
         assert_eq!(lenient.diff_pixels, 4);
         assert_eq!(lenient.anti_aliased_pixels, 0);
+    }
+
+    #[test]
+    fn bounds_cover_all_differing_pixels_and_are_outlined() {
+        let a = RgbaImage::from_pixel(40, 40, Rgba([0, 0, 0, 255]));
+        let mut b = a.clone();
+        b.put_pixel(10, 12, Rgba([255, 255, 255, 255]));
+        b.put_pixel(20, 25, Rgba([255, 255, 255, 255]));
+        let result = diff_images(&a, &b, STRICT);
+        assert_eq!(result.bounds, Some((10, 12, 20, 25)));
+        let corner = result
+            .image
+            .get_pixel(10 - BOUNDS_PADDING, 12 - BOUNDS_PADDING);
+        assert!(corner[0] > 100 && corner[3] == 255);
+        assert_eq!(
+            result.image.get_pixel(30, 30),
+            &faded(&Rgba([0, 0, 0, 255]))
+        );
     }
 }
