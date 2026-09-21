@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ResultFile",
+  "type": "object",
+  "required": [
+    "profile",
+    "results",
+    "schema_version",
+    "summary"
+  ],
+  "properties": {
+    "profile": {
+      "type": "string"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Entry"
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "summary": {
+      "$ref": "#/definitions/Summary"
+    }
+  },
+  "definitions": {
+    "Entry": {
+      "type": "object",
+      "required": [
+        "id",
+        "status"
+      ],
+      "properties": {
+        "baseline": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "current": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "diff": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "diff_pixels": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "diff_ratio": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "id": {
+          "type": "string"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/Status"
+        }
+      }
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "changed",
+        "added",
+        "removed",
+        "mismatch",
+        "error",
+        "unchanged"
+      ]
+    },
+    "Summary": {
+      "type": "object",
+      "required": [
+        "added",
+        "changed",
+        "error",
+        "mismatch",
+        "removed",
+        "unchanged"
+      ],
+      "properties": {
+        "added": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "changed": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "error": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "mismatch": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "removed": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "unchanged": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    }
+  }
+}

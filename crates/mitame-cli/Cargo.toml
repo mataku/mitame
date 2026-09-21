@@ -1,0 +1,18 @@
+[package]
+name = "mitame-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Visual regression testing CLI: compare screenshots against a baseline and manage approvals"
+
+[[bin]]
+name = "mitame"
+path = "src/main.rs"
+
+[dependencies]
+mitame-contract = { path = "../mitame-contract" }
+mitame-core = { path = "../mitame-core" }
+clap = { version = "4", features = ["derive", "env"] }
+serde_json.workspace = true
+schemars.workspace = true

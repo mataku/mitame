@@ -1,0 +1,21 @@
+[package]
+name = "mitame-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Comparison, reporting, and baseline management for mitame"
+
+[dependencies]
+mitame-contract = { path = "../mitame-contract" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+toml = "0.8"
+globset = "0.4"
+walkdir = "2"
+rayon = "1"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[dev-dependencies]
+tempfile = "3"
