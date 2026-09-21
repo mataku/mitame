@@ -16,7 +16,7 @@ Flutter already has golden tests, and there are Dart packages that build on them
 
 ## Status
 
-Early development. The end-to-end slice works for Flutter: capture from `flutter test`, `mitame compare` with an HTML report, `mitame approve`. See [Roadmap](#roadmap) for what is not built yet.
+Early development. The end-to-end slice works for Flutter: capture from `flutter test`, `mitame compare` with an HTML report, `mitame approve`, and the `mitame test` wrapper. See [Roadmap](#roadmap) for what is not built yet.
 
 ## Layout
 
@@ -63,7 +63,7 @@ mitame compare      # exit 0: no differences, 1: differences or policy failure, 
 mitame approve      # promote current into baseline
 ```
 
-`compare` writes `.mitame/report/index.html` alongside `result.json`. The report directory is self-contained (it holds copies of the baseline and current images it shows), so uploading `.mitame/report/` as a CI artifact is enough to review a run. `mitame report` regenerates the HTML from an existing `result.json`.
+`mitame test [flutter test args]` runs both steps in one command for local feedback: it sets the output directory and profile, runs `flutter test`, then compares. mitame's own flags such as `--profile` go before the `flutter test` arguments. `compare` writes `.mitame/report/index.html` alongside `result.json`. The report directory is self-contained (it holds copies of the baseline and current images it shows), so uploading `.mitame/report/` as a CI artifact is enough to review a run. `mitame report` regenerates the HTML from an existing `result.json`.
 
 ## Configuration
 
@@ -101,7 +101,7 @@ Only Flutter is supported today. The contract is capture-agnostic, so iOS and An
 - [x] `result.json` and diff images
 - [x] HTML report
 - [ ] anti-aliasing detection (config key accepted, not applied)
-- [ ] `mitame test`: run `flutter test` then `compare` in one command for local feedback
+- [x] `mitame test`: run `flutter test` then `compare` in one command for local feedback
 - [ ] skip sidecar copy in `approve` when the PNG is unchanged
 - [ ] remote baseline storage (S3 / GCS) and PR comments
 - [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)

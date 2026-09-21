@@ -45,6 +45,12 @@ enum Command {
         #[command(flatten)]
         common: Common,
     },
+    Test {
+        #[command(flatten)]
+        common: Common,
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     Schema {
         #[arg(long, default_value = "schema")]
         out: PathBuf,
@@ -66,6 +72,21 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
     match cli.command {
         Command::Compare { common } => {
             let (config, layout) = resolve(&common)?;
+            run_compare(&config, &layout)
+        }
+        Command::Test { common, args } => {
+            let (config, layout) = resolve(&common)?;
+            let output_dir = std::path::absolute(layout.root.join("current"))?;
+            let status = std::process::Command::new("flutter")
+                .arg("test")
+                .args(&args)
+                .env("MITAME_OUTPUT_DIR", &output_dir)
+                .env("MITAME_PROFILE", &layout.profile)
+                .status()?;
+            if !status.success() {
+                eprintln!("flutter test exited with {status}");
+                return Ok(EXIT_ERROR);
+            }
             run_compare(&config, &layout)
         }
         Command::Report { common } => {
