@@ -13,7 +13,7 @@ const EXIT_ERROR: u8 = 2;
 #[command(
     name = "mitame",
     version,
-    about = "Visual regression testing for Flutter, iOS, and Android"
+    about = "Visual regression testing for Flutter"
 )]
 struct Cli {
     #[command(subcommand)]
