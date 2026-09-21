@@ -42,7 +42,7 @@ cd adapters/ios && ../../target/debug/mitame run -- xcodebuild test -scheme Mita
 
 ## Releases and publishing
 
-- Releases, tags, and package publishing happen only through GitHub Actions (`release.yml` on `v*`, `publish-flutter.yml` on `flutter-v*`). Never run `git tag`, `gh release`, `cargo publish`, `dart pub publish`, or Maven publishing locally.
+- Releases, tags, and package publishing happen only through GitHub Actions (`release.yml` on `v*`, `publish-flutter.yml` on `flutter-v*`). `release.yml` also accepts `workflow_dispatch`, which builds every target without publishing; use it to verify the matrix before a tag. Never run `git tag`, `gh release`, `cargo publish`, `dart pub publish`, or Maven publishing locally.
 - A `v*` tag must match the version in `Cargo.toml`, `adapters/flutter/pubspec.yaml`, and `adapters/android/gradle.properties`; bump all three together.
 - No release has been cut yet and the version stays `0.1.0` until the maintainer decides otherwise. Installation sections that say TBA stay TBA until then.
 - `mitame-report` (the pull request comment action) is a separate repository and is not a dependency of anything here.

@@ -3,6 +3,7 @@ name: release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,14 +14,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: |
-          tag="${GITHUB_REF_NAME#v}"
           cargo_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
           pub_version="$(sed -n 's/^version: \(.*\)/\1/p' adapters/flutter/pubspec.yaml)"
           android_version="$(sed -n 's/^version=\(.*\)/\1/p' adapters/android/gradle.properties)"
-          echo "tag=$tag cargo=$cargo_version pubspec=$pub_version android=$android_version"
-          test "$tag" = "$cargo_version"
-          test "$tag" = "$pub_version"
-          test "$tag" = "$android_version"
+          echo "ref=$GITHUB_REF cargo=$cargo_version pubspec=$pub_version android=$android_version"
+          test "$cargo_version" = "$pub_version"
+          test "$cargo_version" = "$android_version"
+          case "$GITHUB_REF" in
+            refs/tags/v*) test "${GITHUB_REF_NAME#v}" = "$cargo_version" ;;
+            *) echo "not a tag; skipping the tag check" ;;
+          esac
 
   build:
     needs: check-version
@@ -73,6 +76,7 @@ jobs:
             mitame-${{ matrix.target }}.tar.gz.sha256
 
   publish:
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     steps:
