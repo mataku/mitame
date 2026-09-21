@@ -1,0 +1,60 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# mitame runtime output (baseline/ is committed)
+**/.mitame/current/
+**/.mitame/report/
+
+# Dart / Flutter
+.dart_tool/
+.pub-cache/
+.pub/
+**/build/
+**/doc/api/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/ios/Flutter/.last_build_id
+app.*.symbols
+app.*.map.json
+.fvm/
+/adapters/flutter/pubspec.lock
+
+# Android (for the future Android adapter)
+**/local.properties
+**/.gradle/
+**/.cxx/
+**/.kotlin/
+*.iml
+*.jks
+*.keystore
+
+# iOS (for the future iOS adapter)
+xcuserdata/
+*.xcuserstate
+**/.build/
+**/.swiftpm/
+**/Pods/
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.p12
+
+# IDE
+**/.idea/
+*.ipr
+*.iws
+.vscode/
+
+# OS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Misc
+*.log
+*.swp
+.env
+.envrc
