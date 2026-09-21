@@ -13,7 +13,7 @@ const EXIT_ERROR: u8 = 2;
 #[command(
     name = "mitame",
     version,
-    about = "Visual regression testing for Flutter"
+    about = "Visual regression testing for Flutter, Android, and iOS"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -55,6 +55,14 @@ enum Command {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    Run {
+        #[command(flatten)]
+        common: Common,
+        #[arg(long)]
+        keep_current: bool,
+        #[arg(required = true, trailing_var_arg = true, allow_hyphen_values = true)]
+        command: Vec<String>,
+    },
     Schema {
         #[arg(long, default_value = "schema")]
         out: PathBuf,
@@ -85,37 +93,18 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             args,
         } => {
             let (config, layout) = resolve(&common)?;
-            let output_dir = std::path::absolute(layout.root.join("current"))?;
             let flutter = resolve_flutter(flutter, Path::new("."));
-            println!("using {}", flutter.display());
-            if !keep_current {
-                let dir = layout.current_dir();
-                if dir.exists() {
-                    std::fs::remove_dir_all(&dir)?;
-                }
-            }
-            let run_id = format!(
-                "{}-{}",
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_millis())
-                    .unwrap_or(0),
-                std::process::id()
-            );
-            let status = std::process::Command::new(&flutter)
-                .arg("test")
-                .args(&args)
-                .env("MITAME_OUTPUT_DIR", &output_dir)
-                .env("MITAME_PROFILE", &layout.profile)
-                .env("MITAME_RUN_ID", &run_id)
-                .status()
-                .map_err(|e| format!("failed to run {}: {e}", flutter.display()))?;
-            let code = run_compare(&config, &layout)?;
-            if !status.success() {
-                eprintln!("flutter test exited with {status}; the report covers the captures that succeeded");
-                return Ok(EXIT_ERROR);
-            }
-            Ok(code)
+            let mut command = vec![flutter.to_string_lossy().into_owned(), "test".to_string()];
+            command.extend(args);
+            run_capture(&config, &layout, &command, keep_current)
+        }
+        Command::Run {
+            common,
+            keep_current,
+            command,
+        } => {
+            let (config, layout) = resolve(&common)?;
+            run_capture(&config, &layout, &command, keep_current)
         }
         Command::Report { common } => {
             let (_, layout) = resolve(&common)?;
@@ -159,6 +148,56 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
             Ok(EXIT_OK)
         }
     }
+}
+
+fn run_capture(
+    config: &Config,
+    layout: &Layout,
+    command: &[String],
+    keep_current: bool,
+) -> Result<u8, Box<dyn std::error::Error>> {
+    let output_dir = std::path::absolute(layout.root.join("current"))?;
+    println!("using {}", command.join(" "));
+    if !keep_current {
+        let dir = layout.current_dir();
+        if dir.exists() {
+            std::fs::remove_dir_all(&dir)?;
+        }
+    }
+    let run_id = format!(
+        "{}-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0),
+        std::process::id()
+    );
+    let vars = [
+        (
+            "MITAME_OUTPUT_DIR",
+            output_dir.to_string_lossy().into_owned(),
+        ),
+        ("MITAME_PROFILE", layout.profile.clone()),
+        ("MITAME_RUN_ID", run_id),
+    ];
+    let mut child = std::process::Command::new(&command[0]);
+    child.args(&command[1..]);
+    for (key, value) in &vars {
+        child.env(key, value);
+        child.env(format!("TEST_RUNNER_{key}"), value);
+    }
+    let status = child
+        .status()
+        .map_err(|e| format!("failed to run {}: {e}", command[0]))?;
+    let code = run_compare(config, layout)?;
+    if !status.success() {
+        eprintln!(
+            "{} exited with {status}; the report covers the captures that succeeded",
+            command[0]
+        );
+        return Ok(EXIT_ERROR);
+    }
+    Ok(code)
 }
 
 fn run_compare(config: &Config, layout: &Layout) -> Result<u8, Box<dyn std::error::Error>> {
