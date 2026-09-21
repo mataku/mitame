@@ -59,3 +59,8 @@ Thumbs.db
 .env
 .envrc
 /bench/fixture*/
+
+# Android adapter
+/adapters/android/.gradle/
+/adapters/android/**/build/
+/adapters/android/local.properties

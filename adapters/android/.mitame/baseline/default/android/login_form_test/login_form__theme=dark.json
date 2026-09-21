@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "android/login_form_test/login_form__theme=dark",
+  "platform": "android",
+  "capture": "widget",
+  "group": "login_form_test",
+  "name": "login_form",
+  "display_name": "login_form",
+  "variant": {
+    "theme": "dark"
+  },
+  "image": {
+    "width": 1080,
+    "height": 720,
+    "scale": 3.0
+  },
+  "env": {
+    "os": "android",
+    "sdk": "35",
+    "device": "robolectric",
+    "renderer": "robolectric",
+    "ci": false
+  },
+  "captured_at": "2026-09-21T12:45:27.224804Z",
+  "ext": {
+    "android": {}
+  }
+}
