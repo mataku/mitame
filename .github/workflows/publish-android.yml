@@ -34,3 +34,4 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
         run: ./gradlew publishToMavenCentral --no-daemon
+      - run: echo "Uploaded ${GITHUB_REF_NAME}. Review the deployment and click Publish at https://central.sonatype.com/publishing" | tee -a "$GITHUB_STEP_SUMMARY"
