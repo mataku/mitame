@@ -43,7 +43,7 @@ On GitHub Actions, the same `curl` step installs the Linux archive in a few seco
 
 Adapters:
 
-- Flutter: `mitame_flutter` on pub.dev, TBA.
+- Flutter: [`mitame_flutter`](https://pub.dev/packages/mitame_flutter) on pub.dev: `flutter pub add --dev mitame_flutter`.
 - Android: `io.github.mataku:mitame-android` and `io.github.mataku:mitame-android-compose` on Maven Central, TBA.
 - iOS: a Swift package exposed through the repository's root `Package.swift`.
 
@@ -53,7 +53,7 @@ Adapters:
 
 ## Quick start (Flutter)
 
-Add the adapter, then replace the comparator in `test/flutter_test_config.dart`:
+Add the adapter with `flutter pub add --dev mitame_flutter`, then replace the comparator in `test/flutter_test_config.dart`:
 
 ```dart
 import 'dart:async';
