@@ -26,6 +26,12 @@ Flutter teams first: the golden churn on SDK upgrades is the problem mitame was 
 
 ## Install
 
+With Homebrew on macOS or Linux:
+
+```sh
+brew install mataku/tap/mitame
+```
+
 Prebuilt binaries are on [GitHub Releases](https://github.com/mataku/mitame/releases) for macOS (arm64, x64), Linux (x64, arm64, statically linked with musl), and Windows (x64). Archives are named `mitame-<target>.tar.gz` with `<target>` one of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `x86_64-pc-windows-msvc`, each with a `.sha256` file:
 
 ```sh
