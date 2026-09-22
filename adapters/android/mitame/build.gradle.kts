@@ -1,6 +1,6 @@
 plugins {
     id("com.android.library")
-    id("maven-publish")
+    id("com.vanniktech.maven.publish")
 }
 
 android {
@@ -15,36 +15,19 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
 }
 
-group = "io.github.mataku"
-
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = project.group.toString()
-            artifactId = "mitame-android"
-            version = project.version.toString()
-            afterEvaluate {
-                from(components["release"])
-            }
-            pom {
-                name.set("mitame-android")
-                description.set("Capture adapter for mitame visual regression testing")
-                url.set("https://github.com/mataku/mitame")
-                licenses {
-                    license {
-                        name.set("MIT")
-                        url.set("https://github.com/mataku/mitame/blob/HEAD/LICENSE")
-                    }
-                }
-            }
-        }
+mavenPublishing {
+    configure(
+        com.vanniktech.maven.publish.AndroidSingleVariantLibrary(
+            javadocJar = com.vanniktech.maven.publish.JavadocJar.Empty(),
+            sourcesJar = com.vanniktech.maven.publish.SourcesJar.Sources(),
+            variant = "release",
+        )
+    )
+    coordinates(artifactId = "mitame-android")
+    pom {
+        name.set("mitame-android")
+        description.set("Capture adapter for mitame visual regression testing")
     }
 }

@@ -16,7 +16,7 @@ jobs:
       - run: |
           cargo_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
           pub_version="$(sed -n 's/^version: \(.*\)/\1/p' adapters/flutter/pubspec.yaml)"
-          android_version="$(sed -n 's/^version=\(.*\)/\1/p' adapters/android/gradle.properties)"
+          android_version="$(sed -n 's/^VERSION_NAME=\(.*\)/\1/p' adapters/android/gradle.properties)"
           echo "ref=$GITHUB_REF cargo=$cargo_version pubspec=$pub_version android=$android_version"
           test "$cargo_version" = "$pub_version"
           test "$cargo_version" = "$android_version"
