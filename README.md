@@ -112,21 +112,24 @@ for (final variant in Mitame.matrix({'theme': ['light', 'dark'], 'locale': ['ja'
 
 ### Android
 
-Add `testImplementation("io.github.mataku:mitame-android:0.1.0")` (and `mitame-android-compose` for Compose), then capture from a Robolectric test:
+Add `testImplementation("io.github.mataku:mitame-android-compose:0.1.0")` (it brings `mitame-android`, which is enough on its own for `View` capture), then capture from a Robolectric test:
 
 ```kotlin
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LoginFormTest {
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
     @Test
     fun loginForm() {
-        val view = LoginFormView(ApplicationProvider.getApplicationContext())
-        Mitame.capture(view, "login_form", mapOf("theme" to "light"), widthPx = 1080, heightPx = 720)
+        composeTestRule.setContent { LoginForm(dark = false) }
+        composeTestRule.captureMitame("login_form", mapOf("theme" to "light"))
     }
 }
 ```
 
-Point `[capture] command` in `mitame.toml` at the module's test task with `--rerun`, and see [Android](docs/android.md) for the `MITAME_OUTPUT_DIR` handling a Gradle module needs.
+A `View` goes through `Mitame.capture(view, "login_form", variant, widthPx = 1080, heightPx = 720)`. Point `[capture] command` in `mitame.toml` at the module's test task with `--rerun`, and see [Android](docs/android.md) for the `MITAME_OUTPUT_DIR` handling a Gradle module needs.
 
 ### iOS
 
@@ -136,12 +139,12 @@ Add `.package(url: "https://github.com/mataku/mitame", from: "0.1.0")` to the te
 @MainActor
 final class LoginFormTests: XCTestCase {
     func testLoginForm() throws {
-        try Mitame.capture(LoginFormView(), name: "login_form", variant: ["theme": "light"], size: CGSize(width: 360, height: 240))
+        try Mitame.capture(LoginForm(dark: false), name: "login_form", variant: ["theme": "light"])
     }
 }
 ```
 
-Set `[capture] command` to your `xcodebuild test` invocation, including a `-destination` with `OS=`; `mitame run` passes the `TEST_RUNNER_` variables xcodebuild needs. See [iOS](docs/ios.md).
+A SwiftUI `View` is sized by `sizeThatFits` at 390 points wide unless `size:` is given; a `UIView` goes through the same call. Set `[capture] command` to your `xcodebuild test` invocation, including a `-destination` with `OS=`; `mitame run` passes the `TEST_RUNNER_` variables xcodebuild needs. See [iOS](docs/ios.md).
 
 ## Examples
 
