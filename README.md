@@ -10,11 +10,11 @@ Visual regression testing for Flutter, Android, and iOS with one binary and one 
 
 Flutter already has golden tests, and Android and iOS have mature snapshot libraries. mitame exists because of what those leave unsolved.
 
-- **Upgrades stop invalidating every golden.** `flutter_test` compares pixels exactly, so an engine or SDK update that shifts a few pixels of anti-aliasing fails every golden at once, and the only remedies are to regenerate them all without knowing whether a real change slipped in, or to render text as Ahem boxes on CI and never check real text. mitame's per-pixel tolerance and anti-aliasing detection separate that noise from change (in one measured Flutter app, 24 goldens went from 8 to 9 differing pixels each under stock to 0 under mitame), while every remaining pixel counts, so a one-word change is never hidden. Systematic differences between rendering platforms, such as macOS against Linux, are not absorbed; they get a baseline per profile instead.
-- **Review instead of assert.** A visual difference does not fail the test run. `mitame compare` reports every changed screenshot with a diff image in a self-contained HTML page, and `--update` writes the changed and added ones into the baseline, where git shows the change and lets you revert what you do not want. Baselines live under `.mitame/baseline/` as one reviewable set rather than scattered next to tests. This is the workflow of hosted tools like Percy or reg-suit, without a hosted service and without a Node toolchain in a mobile repository.
-- **One pipeline for Flutter, Android, and iOS.** The adapters share a file contract, so the same tolerance, anti-aliasing detection, profiles, approval flow, and report page apply to all three. The Android and iOS adapters were added without changing the binary, and a single `compare` run reports every platform on one page.
-- **Dependencies that do not rot.** Golden helper packages pull in their own dependency trees and break, or are discontinued, when the SDK moves. Each mitame adapter depends only on its platform's SDK (`flutter_test`, the Android SDK, UIKit), so the only thing it tracks is that SDK, and the comparison logic lives in a static binary with no relationship to your lockfiles.
-- **Comparison outside the test process.** The test isolate only encodes and writes a PNG; decoding, diffing, and reporting happen once per suite in Rust, in parallel, and never block a test file. Unchanged goldens cost the same as stock; when every golden differs, the comparison overhead for 200 phone-size goldens drops from 2.9 s to 0.7 s, and from 18.8 s to 3.8 s at 3x device size (`mitame-bench`, 4 jobs, Apple Silicon). Rendering and PNG encoding inside the test runner are unchanged and remain the larger share of total time.
+- **Upgrades stop invalidating every golden.** Per-pixel tolerance and anti-aliasing detection absorb the few-pixel shifts an SDK update causes, while every remaining pixel still counts, so a one-word change is never hidden.
+- **Review instead of assert.** A visual difference does not fail the test run. The report shows it next to a diff image, and `--update` writes it into a baseline that git reviews and reverts.
+- **One pipeline for Flutter, Android, and iOS.** The adapters share a file contract, so one binary, one `mitame.toml`, and one report serve all three.
+- **Dependencies that do not rot.** Each adapter depends only on its platform SDK (`flutter_test`, the Android SDK, UIKit); the comparison lives in a static binary outside your lockfiles.
+- **Comparison outside the test process.** Tests only write PNGs; decoding, diffing, and reporting run once per suite in Rust, in parallel. Unchanged goldens cost the same as stock and changed ones a fraction; see [`bench/README.md`](bench/README.md) for numbers.
 
 ### Who it is for
 
@@ -59,40 +59,18 @@ Adapters:
   .package(url: "https://github.com/mataku/mitame", from: "0.1.0")
   ```
 
-## Quick start (Flutter)
+## Quick start
 
-Add the adapter with `flutter pub add --dev mitame_flutter`, then replace the comparator in `test/flutter_test_config.dart`:
-
-```dart
-import 'dart:async';
-import 'package:mitame_flutter/mitame_flutter.dart';
-
-Future<void> testExecutable(FutureOr<void> Function() testMain) async {
-  await Mitame.install(loadFonts: true);
-  await testMain();
-}
-```
-
-Existing `matchesGoldenFile` calls now capture instead of compare. To capture variants, encode them in the golden name:
-
-```dart
-for (final variant in Mitame.matrix({'theme': ['light', 'dark'], 'locale': ['ja', 'en']})) {
-  await tester.pumpWidget(buildApp(variant));
-  await tester.pumpAndSettle();
-  await expectLater(find.byType(LoginForm), matchesGoldenFile(Mitame.golden('login_form', variant)));
-}
-```
-
-Run, review, update:
+Install the binary, then in the repository:
 
 ```sh
-mitame init             # writes mitame.toml with [capture] command = ["flutter", "test"]
+mitame init             # writes mitame.toml with the detected test command (flutter test, ./gradlew test --rerun)
 mitame run              # capture, then compare; exit 0 clean, 1 differences, 2 error
 mitame review           # open the report in the browser; `mitame review <id>` jumps to one screenshot
 mitame compare --update # write the changed and added screenshots into .mitame/baseline/, then review the git diff
 ```
 
-The commands map onto three directories. `run` is `capture` followed by `compare`; only `baseline/` is committed.
+Add `.mitame/current/` and `.mitame/report/` to `.gitignore` and commit `.mitame/baseline/`. The commands map onto three directories. `run` is `capture` followed by `compare`; only `baseline/` is committed.
 
 ```mermaid
 flowchart LR
@@ -106,7 +84,64 @@ flowchart LR
     report --> review["mitame review"]
 ```
 
-Add `.mitame/current/` and `.mitame/report/` to `.gitignore` and commit `.mitame/baseline/`. `mitame init` writes `mitame.toml` with the detected test command and the default settings; the command can also be given after `--`, as in `mitame run -- flutter test`. Existing goldens can be moved into the baseline by copying: the adapter writes exactly the bytes stock `flutter_test` would have written, and `flutter test --update-goldens` also writes into `.mitame/current/` once the adapter is installed.
+Capture is the adapter's job; add the one for your platform.
+
+### Flutter
+
+`flutter pub add --dev mitame_flutter`, then replace the comparator in `test/flutter_test_config.dart`:
+
+```dart
+import 'dart:async';
+import 'package:mitame_flutter/mitame_flutter.dart';
+
+Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+  await Mitame.install(loadFonts: true);
+  await testMain();
+}
+```
+
+Existing `matchesGoldenFile` calls now capture instead of compare, and existing goldens move into the baseline by copying. To capture variants, encode them in the golden name:
+
+```dart
+for (final variant in Mitame.matrix({'theme': ['light', 'dark'], 'locale': ['ja', 'en']})) {
+  await tester.pumpWidget(buildApp(variant));
+  await tester.pumpAndSettle();
+  await expectLater(find.byType(LoginForm), matchesGoldenFile(Mitame.golden('login_form', variant)));
+}
+```
+
+### Android
+
+Add `testImplementation("io.github.mataku:mitame-android:0.1.0")` (and `mitame-android-compose` for Compose), then capture from a Robolectric test:
+
+```kotlin
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class LoginFormTest {
+    @Test
+    fun loginForm() {
+        val view = LoginFormView(ApplicationProvider.getApplicationContext())
+        Mitame.capture(view, "login_form", mapOf("theme" to "light"), widthPx = 1080, heightPx = 720)
+    }
+}
+```
+
+Point `[capture] command` in `mitame.toml` at the module's test task with `--rerun`, and see [Android](docs/android.md) for the `MITAME_OUTPUT_DIR` handling a Gradle module needs.
+
+### iOS
+
+Add `.package(url: "https://github.com/mataku/mitame", from: "0.1.0")` to the test target, then capture from an XCTest:
+
+```swift
+@MainActor
+final class LoginFormTests: XCTestCase {
+    func testLoginForm() throws {
+        try Mitame.capture(LoginFormView(), name: "login_form", variant: ["theme": "light"], size: CGSize(width: 360, height: 240))
+    }
+}
+```
+
+Set `[capture] command` to your `xcodebuild test` invocation, including a `-destination` with `OS=`; `mitame run` passes the `TEST_RUNNER_` variables xcodebuild needs. See [iOS](docs/ios.md).
 
 ## Examples
 
