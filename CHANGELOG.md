@@ -1,0 +1,16 @@
+# Changelog
+
+Sections are keyed by version; `release.yml` publishes the section matching the pushed `v<version>` tag as the release notes.
+
+## 0.1.0
+
+First release.
+
+- `mitame compare` compares PNG screenshots in `.mitame/current/` against `.mitame/baseline/` with a byte-equality shortcut, per-pixel YIQ tolerance, anti-aliasing detection, and dimension and scale checks, and writes `result.json`, diff images, and a self-contained HTML report with a viewer (zoom, onion-skin overlay, keyboard navigation, id filter).
+- `mitame compare --update` writes changed, mismatched, and added screenshots into the baseline from the comparison result and leaves screenshots that are unchanged within the tolerance alone; `--prune` also deletes removed ones.
+- `mitame capture` runs the test command from `[capture] command` in `mitame.toml` with the capture environment set and `.mitame/current/<profile>/` cleared; `mitame run` is capture followed by compare and writes the report even when the command fails.
+- `mitame init` writes `mitame.toml` with the defaults and the test command detected from the project; `mitame review [id]` opens the report in the browser, optionally at one screenshot.
+- Commands find the project root from any subdirectory, `result.json` records the binary version, and a sidecar written for another schema version is reported as an error.
+- Profiles (`--profile`, `MITAME_PROFILE`) keep one baseline per rendering platform; per-identity `[[rules]]` override thresholds; `[policy]` decides whether added, removed, and mismatched screenshots fail the run.
+- Adapters: `mitame_flutter` (depends on `flutter_test` only, replaces the golden comparator, loads real fonts, `Mitame.matrix` for variants), `mitame-android` and `mitame-android-compose` (Android SDK and Compose test only), and the `Mitame` Swift package (UIKit and SwiftUI capture). The Flutter and Android packages are not yet published to pub.dev or Maven Central; use them from this repository. The Swift package resolves from the `v0.1.0` tag.
+- Prebuilt binaries for macOS (arm64, x64), Linux (x64 and arm64, musl), and Windows (x64, experimental and not exercised by CI).
