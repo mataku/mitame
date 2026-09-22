@@ -9,7 +9,7 @@ mitame is a visual regression testing tool: a Rust binary (`crates/`) that compa
 ## Boundaries that must hold
 
 - The binary stops at `.mitame/report/`. It never talks to object storage, the GitHub API, or any hosted service. Uploading and pull request comments are CI concerns.
-- Each adapter depends only on its platform SDK: `flutter_test` for Flutter, the Android SDK for `adapters/android/mitame` (Compose support lives in the separate `mitame-compose` module), UIKit/SwiftUI/Foundation for iOS. Do not add third-party packages to an adapter.
+- Each adapter depends only on its platform SDK: `flutter_test` for Flutter, the Android SDK for `adapters/android/mitame` (Compose support lives in the separate `mitame-compose` module), UIKit/SwiftUI/Foundation for iOS. Do not add third-party packages to an adapter. The `com.vanniktech.maven.publish` Gradle plugin is a build-time exception that only drives Maven Central publishing.
 - Adapters read exactly `MITAME_OUTPUT_DIR`, `MITAME_PROFILE`, `MITAME_RUN_ID`, and (Flutter only) `MITAME_FONTS`. New behavior is configured on the binary side (`mitame.toml`), not by adding adapter inputs.
 - Changing the sidecar or `result.json` shape means updating `crates/mitame-contract`, regenerating `schema/` with `cargo run -p mitame-cli -- schema`, and mirroring the change in all three adapters. Additive fields do not bump `schema_version`; renames and removals do.
 - Comparison defaults stay strict (`threshold = 0.0`, `max_diff_pixels = 0`). Do not loosen them to make an example pass; adjust the example or add a `[[rules]]` entry for the one identity that needs it.
@@ -42,7 +42,7 @@ cd adapters/ios && ../../target/debug/mitame run -- xcodebuild test -scheme Mita
 
 ## Releases and publishing
 
-- Releases, tags, and package publishing happen only through GitHub Actions (`release.yml` on `v*`, `publish-flutter.yml` on `flutter-v*`). `release.yml` also accepts `workflow_dispatch`, which builds every target without publishing; use it to verify the matrix before a tag. Never run `git tag`, `gh release`, `cargo publish`, `dart pub publish`, or Maven publishing locally.
+- Releases, tags, and package publishing happen only through GitHub Actions (`release.yml` on `v*`, `publish-flutter.yml` on `flutter-v*`, `publish-android.yml` by manual dispatch, which tags `android-v*` itself). `release.yml` also accepts `workflow_dispatch`, which builds every target without publishing; use it to verify the matrix before a tag. Never run `git tag`, `gh release`, `cargo publish`, `dart pub publish`, or Maven publishing locally.
 - A `v*` tag must match the version in `Cargo.toml`, `adapters/flutter/pubspec.yaml`, and `adapters/android/gradle.properties`, and `CHANGELOG.md` must have a `## <version>` section, which becomes the release notes; bump all three files and add the section together.
 - No release has been cut yet and the version stays `0.1.0` until the maintainer decides otherwise. Installation sections that say TBA stay TBA until then.
 - `mitame-report` (the pull request comment action) is a separate repository and is not a dependency of anything here.
