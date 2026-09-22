@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use image::{Rgba, RgbaImage};
-use mitame_contract::Status;
+use mitame_contract::{DiffBounds, Status};
 use mitame_core::{compare, update_baseline, Config, Layout};
 
 fn write_png(path: &Path, width: u32, height: u32, color: [u8; 4], marks: &[(u32, u32)]) {
@@ -350,4 +350,51 @@ fn compare_writes_html_report() {
     assert!(html.contains("src=\"current/flutter/a/x.png\""));
     assert!(layout.root.join("report/current/flutter/a/x.png").exists());
     assert!(!layout.root.join("report/baseline/flutter/a/x.png").exists());
+}
+
+#[test]
+fn diff_bounds_cover_the_differing_pixels_and_land_in_result_json() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    let config = Config::default();
+    let png = |side: &str, id: &str| {
+        layout
+            .root
+            .join(side)
+            .join("default")
+            .join(format!("{id}.png"))
+    };
+    write_png(&png("baseline", "ios/a/same"), 20, 20, [0, 0, 0, 255], &[]);
+    write_png(&png("current", "ios/a/same"), 20, 20, [0, 0, 0, 255], &[]);
+    write_png(&png("baseline", "ios/a/moved"), 40, 30, [0, 0, 0, 255], &[]);
+    write_png(
+        &png("current", "ios/a/moved"),
+        40,
+        30,
+        [0, 0, 0, 255],
+        &[(10, 12), (25, 12), (10, 21)],
+    );
+    let outcome = compare(&config, &layout).unwrap();
+    let entry = |id: &str| outcome.result.results.iter().find(|e| e.id == id).unwrap();
+    assert_eq!(
+        entry("ios/a/moved").diff_bounds,
+        Some(DiffBounds {
+            x: 10,
+            y: 12,
+            width: 16,
+            height: 10
+        })
+    );
+    assert_eq!(entry("ios/a/same").diff_bounds, None);
+    let json: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(layout.root.join("report/result.json")).unwrap())
+            .unwrap();
+    let results = json["results"].as_array().unwrap();
+    let moved = results.iter().find(|e| e["id"] == "ios/a/moved").unwrap();
+    assert_eq!(
+        moved["diff_bounds"],
+        serde_json::json!({"x": 10, "y": 12, "width": 16, "height": 10})
+    );
+    let same = results.iter().find(|e| e["id"] == "ios/a/same").unwrap();
+    assert!(same.get("diff_bounds").is_none());
 }

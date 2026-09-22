@@ -34,6 +34,37 @@
     }
   },
   "definitions": {
+    "DiffBounds": {
+      "type": "object",
+      "required": [
+        "height",
+        "width",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "height": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "width": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "x": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "y": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    },
     "Entry": {
       "type": "object",
       "required": [
@@ -63,6 +94,16 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "diff_bounds": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DiffBounds"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "diff_pixels": {

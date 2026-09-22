@@ -2,7 +2,9 @@ use std::fs;
 use std::path::Path;
 
 use image::RgbaImage;
-use mitame_contract::{Entry, Identity, ResultFile, Sidecar, Status, Summary, SCHEMA_VERSION};
+use mitame_contract::{
+    DiffBounds, Entry, Identity, ResultFile, Sidecar, Status, Summary, SCHEMA_VERSION,
+};
 use rayon::prelude::*;
 
 use crate::config::{Config, EffectiveCompare, Severity};
@@ -81,6 +83,7 @@ fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> E
         status: Status::Error,
         diff_ratio: None,
         diff_pixels: None,
+        diff_bounds: None,
         baseline: baseline.exists().then(|| layout.relative(&baseline)),
         current: current.exists().then(|| layout.relative(&current)),
         diff: None,
@@ -214,6 +217,12 @@ fn compare_pair(
         };
         e.diff_ratio = Some(ratio);
         e.diff_pixels = Some(result.diff_pixels);
+        e.diff_bounds = result.bounds.map(|(x0, y0, x1, y1)| DiffBounds {
+            x: x0,
+            y: y0,
+            width: x1 - x0 + 1,
+            height: y1 - y0 + 1,
+        });
         if has_diff {
             e.diff = Some(relative_diff);
         }

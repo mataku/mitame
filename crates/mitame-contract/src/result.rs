@@ -37,6 +37,14 @@ impl Summary {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct DiffBounds {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Entry {
     pub id: String,
@@ -45,6 +53,8 @@ pub struct Entry {
     pub diff_ratio: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub diff_pixels: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff_bounds: Option<DiffBounds>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub baseline: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

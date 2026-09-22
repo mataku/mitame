@@ -4,6 +4,7 @@ Sections are keyed by version; `release.yml` publishes the section matching the 
 
 ## Unreleased
 
+- `result.json` entries with differing pixels carry `diff_bounds` (`x`, `y`, `width`, `height` in image pixels), the bounding box the diff image already outlines, so an agent can crop to the region instead of reading a full-size screenshot. Additive; `schema_version` stays 1.
 - `mitame compare | head` no longer panics with `Broken pipe` when the reader closes stdout early. Write errors on stdout are ignored, so a `--update` run still writes the baseline and the exit code still reflects the comparison.
 - Agent skills under `skills/`: `mitame-setup` guides a coding agent through installing the binary, `mitame init`, the platform adapter, the git rules, the first baseline, and the CI job; `mitame-review` through running `mitame run`, reading `result.json`, and updating the baseline for intended changes only. Installable with `npx skills add mataku/mitame`.
 - `[capture] fonts = "ahem"` in `mitame.toml` makes `capture` and `run` set `MITAME_FONTS=ahem` and widens the per-pixel colour tolerance to 0.2; `mitame init` writes it for Flutter projects. Measured on the example, that gives 0 differing pixels between macOS and Linux while a one-word change still registers at 1728 px. `pixel_tolerance` is now optional and only needed to override that derived value.

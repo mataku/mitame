@@ -15,7 +15,7 @@
 - [x] prebuilt binaries on GitHub Releases (`v0.1.0`, five targets) and a Homebrew tap (`mataku/tap/mitame`)
 - [ ] Windows builds (in the release matrix, never run; `capture` and `run` spawn without a shell, so `.bat` launchers must be named explicitly)
 - [ ] warn when the baseline and current sidecars disagree on `env.os` while `fonts = "real"` on Flutter, the silent failure of comparing real-font captures against the wrong profile; Ahem and Robolectric baselines are shared across macOS and Linux on purpose, so the warning must not fire for them
-- [ ] record the differing region's bounding box in `result.json` (the diff image already outlines it) so an agent can crop instead of reading a full-size screenshot
+- [x] `diff_bounds` in `result.json` records the differing region's bounding box (the diff image already outlines it) so an agent can crop instead of reading a full-size screenshot
 - [ ] `compare --update --from <dir>` to apply a downloaded CI capture (for example the `linux` profile's `current/` from an artifact) to the local baseline, so the CI profile has an update path without the binary touching the network
 - [ ] a setup check (`mitame doctor` or similar): `.gitignore` entries, adapter present, Flutter resolution, profile
 - [x] `mitame compare | head` no longer panics on a closed stdout; stdout write errors are ignored so `--update` still completes
