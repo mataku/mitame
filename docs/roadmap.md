@@ -34,7 +34,6 @@
 - [x] benchmark against stock `LocalFileComparator` (`mitame-bench`)
 - [x] `mitame_flutter` 0.1.0 on pub.dev; later versions publish from `flutter-v*` tags
 - [x] one baseline for macOS and Linux through `fonts = "ahem"` (0 px between macOS and Linux on the example, one-word change 1728 px)
-- [ ] transfer the package to the `mataku.com` verified publisher (created, not yet assigned)
 
 ## iOS
 
