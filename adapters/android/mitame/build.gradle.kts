@@ -41,7 +41,7 @@ publishing {
                 licenses {
                     license {
                         name.set("MIT")
-                        url.set("https://github.com/mataku/mitame/blob/main/LICENSE")
+                        url.set("https://github.com/mataku/mitame/blob/HEAD/LICENSE")
                     }
                 }
             }
