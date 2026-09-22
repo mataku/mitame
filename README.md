@@ -1,5 +1,7 @@
 # mitame
 
+[![ci](https://github.com/mataku/mitame/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/mataku/mitame/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/mataku/mitame)](https://github.com/mataku/mitame/releases) [![pub.dev](https://img.shields.io/pub/v/mitame_flutter)](https://pub.dev/packages/mitame_flutter) [![Maven Central](https://img.shields.io/maven-central/v/io.github.mataku/mitame-android)](https://central.sonatype.com/artifact/io.github.mataku/mitame-android) [![license](https://img.shields.io/github/license/mataku/mitame)](LICENSE)
+
 mitame (見た目, pronounced /mitame/, roughly "mee-tah-meh") is the Japanese word for how something looks.
 
 Visual regression testing for Flutter, Android, and iOS with one binary and one report. A single Rust binary compares screenshots against a committed baseline, produces diff images and a machine-readable result, and updates the baseline from the result. Thin per-platform capture adapters, each a few hundred lines that depend on the platform SDK alone, write PNG files into a fixed layout and nothing else.
@@ -44,7 +46,7 @@ On GitHub Actions, the same `curl` step installs the Linux archive in a few seco
 Adapters:
 
 - Flutter: [`mitame_flutter`](https://pub.dev/packages/mitame_flutter) on pub.dev: `flutter pub add --dev mitame_flutter`.
-- Android: `io.github.mataku:mitame-android` and `io.github.mataku:mitame-android-compose` on Maven Central, TBA.
+- Android: [`io.github.mataku:mitame-android`](https://central.sonatype.com/artifact/io.github.mataku/mitame-android) and [`io.github.mataku:mitame-android-compose`](https://central.sonatype.com/artifact/io.github.mataku/mitame-android-compose) on Maven Central: `testImplementation("io.github.mataku:mitame-android:0.1.0")`.
 - iOS: a Swift package exposed through the repository's root `Package.swift`.
 
   ```swift

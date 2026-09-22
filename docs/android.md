@@ -1,5 +1,14 @@
 # Android
 
+Both modules are on Maven Central; add them to the test configuration of the module that holds the screenshot tests:
+
+```kotlin
+dependencies {
+    testImplementation("io.github.mataku:mitame-android:0.1.0")
+    testImplementation("io.github.mataku:mitame-android-compose:0.1.0")
+}
+```
+
 `adapters/android/mitame` is an Android library that depends on the Android SDK only. It takes a `View` or a `Bitmap` and writes the PNG and sidecar; how the bitmap is produced is the project's choice. The example module renders with Robolectric's native graphics, which needs no emulator, but Paparazzi or an instrumented test can hand `Mitame.write` a bitmap just the same.
 
 ```kotlin
