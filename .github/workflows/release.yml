@@ -19,7 +19,10 @@ jobs:
           android_version="$(sed -n 's/^VERSION_NAME=\(.*\)/\1/p' adapters/android/gradle.properties)"
           echo "ref=$GITHUB_REF cargo=$cargo_version pubspec=$pub_version android=$android_version"
           test "$cargo_version" = "$pub_version"
-          test "$cargo_version" = "$android_version"
+          case "$android_version" in
+            "$cargo_version"|"$cargo_version-SNAPSHOT") ;;
+            *) echo "android VERSION_NAME must be $cargo_version or $cargo_version-SNAPSHOT" >&2; exit 1 ;;
+          esac
           case "$GITHUB_REF" in
             refs/tags/v*) test "${GITHUB_REF_NAME#v}" = "$cargo_version" ;;
             *) echo "not a tag; skipping the tag check" ;;
