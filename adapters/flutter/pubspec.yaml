@@ -2,6 +2,12 @@ name: mitame_flutter
 description: Capture adapter for mitame. Writes golden images into the mitame layout instead of comparing them.
 version: 0.1.0
 repository: https://github.com/mataku/mitame
+issue_tracker: https://github.com/mataku/mitame/issues
+topics:
+  - testing
+  - golden-testing
+  - visual-regression
+  - screenshot
 
 environment:
   sdk: ^3.6.0
