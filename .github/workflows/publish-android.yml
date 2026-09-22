@@ -1,10 +1,11 @@
 name: publish-android
 
 on:
-  workflow_dispatch:
+  push:
+    tags: ["android-v[0-9]+.[0-9]+.[0-9]+*"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   publish:
@@ -18,15 +19,12 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - id: version
-        run: |
+      - run: |
+          tag="${GITHUB_REF_NAME#android-v}"
           version="$(sed -n 's/^VERSION_NAME=\(.*\)/\1/p' gradle.properties)"
-          cargo_version="$(sed -n 's/^version = "\(.*\)"/\1/p' ../../Cargo.toml | head -1)"
-          echo "android=$version cargo=$cargo_version"
-          test -n "$version"
+          echo "tag=$tag android=$version"
           case "$version" in *SNAPSHOT*) echo "refusing to publish a SNAPSHOT" >&2; exit 1 ;; esac
-          test "$version" = "$cargo_version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          test "$tag" = "$version"
       - run: ./gradlew publishToMavenLocal -PsignAllPublications=false --no-daemon
       - run: ls -R ~/.m2/repository/io/github/mataku
       - env:
@@ -36,13 +34,3 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
         run: ./gradlew publishToMavenCentral --no-daemon
-      - env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="android-v${{ steps.version.outputs.version }}"
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "$tag already exists"
-            exit 0
-          fi
-          git tag "$tag"
-          git push origin "$tag"
