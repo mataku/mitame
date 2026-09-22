@@ -23,7 +23,7 @@
 
 ## Integrations
 
-- [ ] `mitame-report` GitHub Action that summarizes `result.json` as a pull request comment (separate repository, scaffolded locally, no remote yet; removed from docs/ci.md until it exists)
+- [ ] `mitame-report` GitHub Action that summarizes `result.json` as a pull request comment (separate repository, scaffolded locally, no remote yet). Until it is published, [CI](ci.md) carries the inline `jq` and `gh` step that produces the same comment; the action packages that rendering behind one `uses:` line and must keep its output identical
 - [x] agent skills under `skills/`: `mitame-setup` for adopting mitame in a project and `mitame-review` for running it, reading `result.json`, inspecting diff images, updating only intended ids, never loosening thresholds, never `--prune` after a partial run
 - [ ] automate the Homebrew formula bump from `release.yml` (needs a token for the tap repository)
 

@@ -63,7 +63,7 @@ Pin the adapter to the binary's version (`mitame_flutter: 0.1.0` rather than `^0
 
 ### 6. Add the CI job
 
-Read `references/ci.md`. It has the minimal GitHub Actions job, the version pin, and the decision that matters most: whether one baseline can serve both the developer machines and the CI runner, which depends on the platform and, for Flutter, on the `fonts` setting.
+Read `references/ci.md`. It has the minimal GitHub Actions job, the version pin, an optional pull request comment step, and the decision that matters most: whether one baseline can serve both the developer machines and the CI runner, which depends on the platform and, for Flutter, on the `fonts` setting.
 
 ### 7. Report what was done
 
