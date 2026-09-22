@@ -2,17 +2,6 @@ name: publish-android
 
 on:
   workflow_dispatch:
-    inputs:
-      dry-run:
-        description: "Run every step except the Maven Central upload and the tag push"
-        required: false
-        default: false
-        type: boolean
-      tag:
-        description: "Push android-v<version> after a successful upload; turn off to verify secrets against a deployment you will drop"
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: write
@@ -40,16 +29,14 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - run: ./gradlew publishToMavenLocal -PsignAllPublications=false --no-daemon
       - run: ls -R ~/.m2/repository/io/github/mataku
-      - if: ${{ !inputs.dry-run }}
-        env:
+      - env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALUSERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALPASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
         run: ./gradlew publishToMavenCentral --no-daemon
-      - if: ${{ !inputs.dry-run && inputs.tag }}
-        env:
+      - env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="android-v${{ steps.version.outputs.version }}"
