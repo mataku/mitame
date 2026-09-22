@@ -14,7 +14,7 @@
 - [x] sidecar `schema_version` check and `mitame_version` in `result.json`
 - [x] prebuilt binaries on GitHub Releases (`v0.1.0`, five targets) and a Homebrew tap (`mataku/tap/mitame`)
 - [ ] Windows builds (in the release matrix, never run; `capture` and `run` spawn without a shell, so `.bat` launchers must be named explicitly)
-- [ ] warn when the baseline and current sidecars disagree on `env.os`, the silent failure of comparing against the wrong profile
+- [ ] warn when the baseline and current sidecars disagree on `env.os` while `fonts = "real"` on Flutter, the silent failure of comparing real-font captures against the wrong profile; Ahem and Robolectric baselines are shared across macOS and Linux on purpose, so the warning must not fire for them
 - [ ] record the differing region's bounding box in `result.json` (the diff image already outlines it) so an agent can crop instead of reading a full-size screenshot
 - [ ] `compare --update --from <dir>` to apply a downloaded CI capture (for example the `linux` profile's `current/` from an artifact) to the local baseline, so the CI profile has an update path without the binary touching the network
 - [ ] a setup check (`mitame doctor` or similar): `.gitignore` entries, adapter present, Flutter resolution, profile
@@ -33,6 +33,7 @@
 - [x] real fonts via `FontManifest.json` and the SDK's Roboto
 - [x] benchmark against stock `LocalFileComparator` (`mitame-bench`)
 - [x] `mitame_flutter` 0.1.0 on pub.dev; later versions publish from `flutter-v*` tags
+- [x] one baseline for macOS and Linux through `fonts = "ahem"` (0 px between macOS and Linux on the example, one-word change 1728 px)
 - [ ] transfer the package to the `mataku.com` verified publisher (created, not yet assigned)
 
 ## iOS
@@ -52,6 +53,7 @@
 - [x] example module verified with Robolectric native graphics, no emulator
 - [x] density recorded as `scale` (3.0 under `xxhdpi`)
 - [x] Compose helper (`mitame-compose` module, `captureMitame` on a compose rule or semantics node)
+- [x] Robolectric renders identically on macOS and Linux (0 px on the example), so one baseline serves local runs and CI
 - [x] `io.github.mataku:mitame-android` and `mitame-android-compose` 0.1.0 on Maven Central; later versions publish from `android-v*` tags and are released by hand on the portal, snapshots through `snapshot-android.yml`
 - [ ] instrumented-test tier (device or emulator, files pulled with adb)
 

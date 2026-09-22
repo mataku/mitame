@@ -100,7 +100,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 }
 ```
 
-Existing `matchesGoldenFile` calls now capture instead of compare, and existing goldens move into the baseline by copying. To capture variants, encode them in the golden name:
+Existing `matchesGoldenFile` calls now capture instead of compare, and existing goldens move into the baseline by copying. `mitame init` sets `fonts = "ahem"`, which renders text as boxes so one baseline serves macOS and Linux CI; set `fonts = "real"` to check real glyphs with a baseline per platform (see [CI](docs/ci.md)). To capture variants, encode them in the golden name:
 
 ```dart
 for (final variant in Mitame.matrix({'theme': ['light', 'dark'], 'locale': ['ja', 'en']})) {
@@ -129,7 +129,7 @@ class LoginFormTest {
 }
 ```
 
-A `View` goes through `Mitame.capture(view, "login_form", variant, widthPx = 1080, heightPx = 720)`. Point `[capture] command` in `mitame.toml` at the module's test task with `--rerun`, and see [Android](docs/android.md) for the `MITAME_OUTPUT_DIR` handling a Gradle module needs.
+A `View` goes through `Mitame.capture(view, "login_form", variant, widthPx = 1080, heightPx = 720)`. Robolectric renders the same pixels on macOS and Linux, so the baseline needs no per-platform profile. Point `[capture] command` in `mitame.toml` at the module's test task with `--rerun`, and see [Android](docs/android.md) for the `MITAME_OUTPUT_DIR` handling a Gradle module needs.
 
 ### iOS
 

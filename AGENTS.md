@@ -13,7 +13,7 @@ mitame is a visual regression testing tool: a Rust binary (`crates/`) that compa
 - Adapters read exactly `MITAME_OUTPUT_DIR`, `MITAME_PROFILE`, `MITAME_RUN_ID`, and (Flutter only) `MITAME_FONTS`. New behavior is configured on the binary side (`mitame.toml`), not by adding adapter inputs.
 - Changing the sidecar or `result.json` shape means updating `crates/mitame-contract`, regenerating `schema/` with `cargo run -p mitame-cli -- schema`, and mirroring the change in all three adapters. Additive fields do not bump `schema_version`; renames and removals do.
 - Comparison defaults stay strict (`threshold = 0.0`, `max_diff_pixels = 0`). Do not loosen them to make an example pass; adjust the example or add a `[[rules]]` entry for the one identity that needs it.
-- Baselines under `adapters/*/example/.mitame/baseline/` (and `adapters/ios/.mitame/baseline/`) are committed fixtures rendered on macOS. Regenerate them with `mitame run --update` only when the example itself changes, and say so in the commit body.
+- Baselines under `adapters/*/example/.mitame/baseline/` (and `adapters/ios/.mitame/baseline/`) are committed fixtures. The Flutter example's is rendered with Ahem (`fonts = "ahem"`) and the Android example's by Robolectric, so both match on macOS and on Linux CI; the iOS one is rendered on macOS with the iPhone 16 / iOS 18.3.1 simulator. Regenerate them with `mitame run --update` only when the example or its capture settings change, and say so in the commit body.
 
 ## Build and verify
 

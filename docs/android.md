@@ -9,7 +9,7 @@ dependencies {
 }
 ```
 
-`adapters/android/mitame` is an Android library that depends on the Android SDK only. It takes a `View` or a `Bitmap` and writes the PNG and sidecar; how the bitmap is produced is the project's choice. The example module renders with Robolectric's native graphics, which needs no emulator, but Paparazzi or an instrumented test can hand `Mitame.write` a bitmap just the same.
+`adapters/android/mitame` is an Android library that depends on the Android SDK only. It takes a `View` or a `Bitmap` and writes the PNG and sidecar; how the bitmap is produced is the project's choice. The example module renders with Robolectric's native graphics, which needs no emulator and draws the same pixels on macOS and Linux (0 differing pixels between a Mac and `ubuntu-latest` on the example), so one committed baseline serves local runs and CI; Paparazzi or an instrumented test can hand `Mitame.write` a bitmap just the same.
 
 ```kotlin
 @RunWith(RobolectricTestRunner::class)
