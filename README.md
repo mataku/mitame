@@ -161,6 +161,7 @@ Each adapter ships a small project that shows the complete setup for that platfo
 - [Configuration](docs/configuration.md): `mitame.toml`, thresholds, and rules
 - [CI](docs/ci.md): baselines per rendering platform and the GitHub Actions workflow
 - [Roadmap](docs/roadmap.md) and [Releasing](docs/releasing.md)
+- [Agent skills](skills/): `mitame-setup` walks a coding agent through adopting mitame in a project, and `mitame-review` through running it and updating the baseline; install both with `npx skills add mataku/mitame`, or copy the directories into your agent's skills folder
 
 ## License
 

@@ -24,7 +24,7 @@
 ## Integrations
 
 - [ ] `mitame-report` GitHub Action that summarizes `result.json` as a pull request comment (separate repository, scaffolded locally, no remote yet; removed from docs/ci.md until it exists)
-- [ ] a short page consumers can paste into their agent instructions: run `mitame run`, read `result.json`, inspect the diff images, update only intended ids, never loosen thresholds, never `--prune` after a partial run
+- [x] agent skills under `skills/`: `mitame-setup` for adopting mitame in a project and `mitame-review` for running it, reading `result.json`, inspecting diff images, updating only intended ids, never loosening thresholds, never `--prune` after a partial run
 - [ ] automate the Homebrew formula bump from `release.yml` (needs a token for the tap repository)
 
 ## Flutter
