@@ -18,7 +18,7 @@
 - [ ] record the differing region's bounding box in `result.json` (the diff image already outlines it) so an agent can crop instead of reading a full-size screenshot
 - [ ] `compare --update --from <dir>` to apply a downloaded CI capture (for example the `linux` profile's `current/` from an artifact) to the local baseline, so the CI profile has an update path without the binary touching the network
 - [ ] a setup check (`mitame doctor` or similar): `.gitignore` entries, adapter present, Flutter resolution, profile
-- [ ] `mitame compare | head` panics on a closed stdout (broken pipe); ignore SIGPIPE or handle the write error
+- [x] `mitame compare | head` no longer panics on a closed stdout; stdout write errors are ignored so `--update` still completes
 - [ ] decide whether `captured_at` belongs in the committed baseline sidecar; every `--update` rewrites the sidecar because of it, doubling the files in a baseline diff
 
 ## Integrations

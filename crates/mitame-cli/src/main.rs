@@ -5,6 +5,13 @@ use clap::{Args, Parser, Subcommand};
 use mitame_contract::{ResultFile, Sidecar};
 use mitame_core::{compare, update_baseline, Config, Layout, CONFIG_TEMPLATE};
 
+macro_rules! out {
+    ($($arg:tt)*) => {{
+        use std::io::Write as _;
+        let _ = writeln!(std::io::stdout(), $($arg)*);
+    }};
+}
+
 const EXIT_OK: u8 = 0;
 const EXIT_DIFF: u8 = 1;
 const EXIT_ERROR: u8 = 2;
@@ -117,17 +124,17 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
                     .collect::<Vec<_>>()
                     .join(", ");
                 text = text.replacen("command = []", &format!("command = [{rendered}]"), 1);
-                println!("detected test command: {}", command.join(" "));
+                out!("detected test command: {}", command.join(" "));
                 if command[0] == "flutter" {
                     text = flutter_defaults(&text);
-                    println!("flutter: fonts = \"ahem\" so one baseline serves macOS and Linux");
+                    out!("flutter: fonts = \"ahem\" so one baseline serves macOS and Linux");
                 }
             } else {
-                println!("no test command detected; set [capture] command in mitame.toml");
+                out!("no test command detected; set [capture] command in mitame.toml");
             }
             std::fs::write(path, text)?;
-            println!("wrote {}", path.display());
-            println!("commit .mitame/baseline/ and add .mitame/current/ and .mitame/report/ to .gitignore");
+            out!("wrote {}", path.display());
+            out!("commit .mitame/baseline/ and add .mitame/current/ and .mitame/report/ to .gitignore");
             Ok(EXIT_OK)
         }
         Command::Capture { common, capture } => {
@@ -173,7 +180,7 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
                 mitame_core::write_html(&layout, &result)?;
             }
             let url = file_url(&std::path::absolute(&html)?, id.as_deref());
-            println!("opening {url}");
+            out!("opening {url}");
             open_in_browser(&url)?;
             Ok(EXIT_OK)
         }
@@ -189,7 +196,7 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
                 out.join("result.schema.json"),
                 serde_json::to_string_pretty(&result)?,
             )?;
-            println!("wrote {}", out.display());
+            out!("wrote {}", out.display());
             Ok(EXIT_OK)
         }
     }
@@ -262,7 +269,7 @@ fn run_capture(
     keep_current: bool,
 ) -> Result<bool, Box<dyn std::error::Error>> {
     let output_dir = std::path::absolute(layout.root.join("current"))?;
-    println!("using {}", command.join(" "));
+    out!("using {}", command.join(" "));
     if !keep_current {
         let dir = layout.current_dir();
         if dir.exists() {
@@ -313,9 +320,15 @@ fn run_compare(
 ) -> Result<u8, Box<dyn std::error::Error>> {
     let outcome = compare(config, layout)?;
     let s = &outcome.result.summary;
-    println!(
+    out!(
         "profile {}: unchanged {}, changed {}, added {}, removed {}, mismatch {}, error {}",
-        layout.profile, s.unchanged, s.changed, s.added, s.removed, s.mismatch, s.error
+        layout.profile,
+        s.unchanged,
+        s.changed,
+        s.added,
+        s.removed,
+        s.mismatch,
+        s.error
     );
     let mut listed: Vec<&mitame_contract::Entry> = outcome
         .result
@@ -339,7 +352,7 @@ fn run_compare(
                     _ => None,
                 })
                 .unwrap_or_default();
-            println!(
+            out!(
                 "  {:<9} {} {}",
                 format!("{:?}", entry.status).to_lowercase(),
                 entry.id,
@@ -347,22 +360,22 @@ fn run_compare(
             );
         }
     }
-    println!(
+    out!(
         "report: {}",
         layout.report_dir().join("index.html").display()
     );
     if update.update {
         let applied = update_baseline(layout, &outcome.result, update.prune)?;
         for id in &applied.updated {
-            println!("updated  {id}");
+            out!("updated  {id}");
         }
         for id in &applied.added {
-            println!("added    {id}");
+            out!("added    {id}");
         }
         for id in &applied.deleted {
-            println!("deleted  {id}");
+            out!("deleted  {id}");
         }
-        println!("baseline: {}", layout.baseline_dir().display());
+        out!("baseline: {}", layout.baseline_dir().display());
     }
     Ok(if outcome.errored {
         EXIT_ERROR
@@ -449,7 +462,7 @@ fn resolve(common: &Common) -> Result<(Config, Layout, PathBuf), Box<dyn std::er
             let cwd = std::env::current_dir()?;
             match find_project_dir(&cwd) {
                 Some(dir) if dir != cwd => {
-                    println!("project: {}", dir.display());
+                    out!("project: {}", dir.display());
                     dir
                 }
                 _ => here,
