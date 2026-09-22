@@ -16,4 +16,4 @@ open .mitame/report/index.html
 ../../../target/debug/mitame compare --update    # after reviewing a change
 ```
 
-Change the title in `lib/login_form.dart` and run `mitame run` again to see five `changed` entries with diff images.
+Change the title in `lib/login_form.dart` and run `mitame run` again to see five `changed` entries with diff images. The committed baseline is rendered with Ahem (`fonts = "ahem"` in `mitame.toml`), which is why the same baseline passes on macOS and on the Linux CI runner.

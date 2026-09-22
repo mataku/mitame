@@ -18,12 +18,12 @@
     "sdk": "3.41.6",
     "ci": false
   },
-  "captured_at": "2026-09-21T12:00:01.161830Z",
+  "captured_at": "2026-09-22T10:04:22.740895Z",
   "ext": {
     "flutter": {
       "golden_uri": "goldens/login_form.png",
       "test_dir": "login",
-      "run_id": "1789991999684-80307"
+      "run_id": "1790071460943-28599"
     }
   }
 }

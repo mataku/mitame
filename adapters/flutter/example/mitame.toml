@@ -1,2 +1,3 @@
 [capture]
 command = ["flutter", "test"]
+fonts = "ahem"
