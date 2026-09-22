@@ -1,6 +1,8 @@
 # mitame
 
-Visual regression testing for Flutter, Android, and iOS with one binary and one report. A single Rust binary compares screenshots against a committed baseline, produces diff images and a machine-readable result, and manages baseline approval. Thin per-platform capture adapters, each a few hundred lines that depend on the platform SDK alone, write PNG files into a fixed layout and nothing else.
+mitame (見た目, pronounced /mitame/, roughly "mee-tah-meh") is the Japanese word for how something looks.
+
+Visual regression testing for Flutter, Android, and iOS with one binary and one report. A single Rust binary compares screenshots against a committed baseline, produces diff images and a machine-readable result, and updates the baseline from the result. Thin per-platform capture adapters, each a few hundred lines that depend on the platform SDK alone, write PNG files into a fixed layout and nothing else.
 
 ## Why mitame
 
