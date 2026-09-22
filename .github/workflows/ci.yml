@@ -36,12 +36,8 @@ jobs:
         working-directory: adapters/flutter
       - run: dart format --set-exit-if-changed -o none lib example/lib example/test
         working-directory: adapters/flutter
-      - run: flutter test
-        working-directory: adapters/flutter/example
-        env:
-          MITAME_PROFILE: linux
       - run: cargo build --locked -p mitame-cli
-      - run: ../../../target/debug/mitame compare --profile linux
+      - run: ../../../target/debug/mitame run
         working-directory: adapters/flutter/example
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -59,7 +55,7 @@ jobs:
           java-version: 21
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - run: cargo build --locked -p mitame-cli
-      - run: ../../target/debug/mitame run --profile linux -- --no-daemon
+      - run: ../../target/debug/mitame run -- --no-daemon
         working-directory: adapters/android
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
