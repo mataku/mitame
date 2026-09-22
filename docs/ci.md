@@ -16,14 +16,19 @@ Delete `.dart_tool/` before switching between the container and the host, since 
 
 ## Workflow
 
-A minimal GitHub Actions job installs the binary, captures with the `linux` profile, compares, and uploads the report. Building from source with `cargo install` works today but takes a few minutes per run; a lighter install step from the release archives is TBA once the first release exists.
+A minimal GitHub Actions job installs the binary from the release archive, captures with the `linux` profile, compares, and uploads the report. Pin the version so a new release does not change a passing job under you.
 
 ```yaml
 permissions:
   contents: read
 
+env:
+  MITAME_VERSION: 0.1.0
+
 steps:
-  - run: cargo install --git https://github.com/mataku/mitame mitame-cli
+  - run: |
+      curl -fsSL "https://github.com/mataku/mitame/releases/download/v${MITAME_VERSION}/mitame-x86_64-unknown-linux-musl.tar.gz" | tar xz
+      sudo mv mitame-x86_64-unknown-linux-musl/mitame /usr/local/bin/
   - run: flutter test
     env:
       MITAME_PROFILE: linux

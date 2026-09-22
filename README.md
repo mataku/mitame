@@ -22,22 +22,22 @@ Early development, no release cut yet. The end-to-end flow (`mitame run` around 
 
 ## Install
 
-Prebuilt binaries will be published on GitHub Releases for macOS (arm64, x64), Linux (x64, arm64, statically linked with musl), and Windows (x64); until the first release, build from source:
-
-```sh
-cargo install --git https://github.com/mataku/mitame mitame-cli
-```
-
-Windows is experimental: the archive is built in the release matrix, but nothing in CI runs it, and `mitame capture` and `mitame run` start the test command without a shell, so a launcher such as `gradlew.bat` must be named with its extension, and a `flutter` command needs `--flutter flutter.bat` or `MITAME_FLUTTER`.
-
-Once released, archives are named `mitame-<target>.tar.gz` with `<target>` one of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `x86_64-pc-windows-msvc`, each with a `.sha256` file:
+Prebuilt binaries are on [GitHub Releases](https://github.com/mataku/mitame/releases) for macOS (arm64, x64), Linux (x64, arm64, statically linked with musl), and Windows (x64). Archives are named `mitame-<target>.tar.gz` with `<target>` one of `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `x86_64-pc-windows-msvc`, each with a `.sha256` file:
 
 ```sh
 curl -fsSL https://github.com/mataku/mitame/releases/latest/download/mitame-aarch64-apple-darwin.tar.gz | tar xz
 sudo mv mitame-aarch64-apple-darwin/mitame /usr/local/bin/
 ```
 
-On GitHub Actions, install with `cargo install --git` for now; a lighter step from the release archives is TBA. See [CI](docs/ci.md).
+Building from source works as well:
+
+```sh
+cargo install --git https://github.com/mataku/mitame --tag v0.1.0 mitame-cli
+```
+
+Windows is experimental: the archive is built in the release matrix, but nothing in CI runs it, and `mitame capture` and `mitame run` start the test command without a shell, so a launcher such as `gradlew.bat` must be named with its extension, and a `flutter` command needs `--flutter flutter.bat` or `MITAME_FLUTTER`.
+
+On GitHub Actions, the same `curl` step installs the Linux archive in a few seconds. See [CI](docs/ci.md).
 
 Adapters:
 
