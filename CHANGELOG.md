@@ -2,6 +2,10 @@
 
 Sections are keyed by version; `release.yml` publishes the section matching the pushed `v<version>` tag as the release notes.
 
+## Unreleased
+
+- `[capture] fonts = "ahem"` in `mitame.toml` makes `capture` and `run` set `MITAME_FONTS=ahem` and widens the per-pixel colour tolerance to 0.2; `mitame init` writes it for Flutter projects. Measured on the example, that gives 0 differing pixels between macOS and Linux while a one-word change still registers at 1728 px. `pixel_tolerance` is now optional and only needed to override that derived value.
+
 ## 0.1.0
 
 First release.

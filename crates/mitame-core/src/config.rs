@@ -33,7 +33,8 @@ pub struct CompareConfig {
     pub algorithm: String,
     pub threshold: f64,
     pub max_diff_pixels: u64,
-    pub pixel_tolerance: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pixel_tolerance: Option<f64>,
     pub anti_aliasing: bool,
 }
 
@@ -43,16 +44,26 @@ impl Default for CompareConfig {
             algorithm: "pixel".to_string(),
             threshold: 0.0,
             max_diff_pixels: 0,
-            pixel_tolerance: 0.1,
+            pixel_tolerance: None,
             anti_aliasing: true,
         }
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CaptureConfig {
     pub command: Vec<String>,
+    pub fonts: String,
+}
+
+impl Default for CaptureConfig {
+    fn default() -> Self {
+        CaptureConfig {
+            command: Vec::new(),
+            fonts: "real".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,11 +119,11 @@ root = ".mitame"
 
 [capture]
 command = []               # the test command `mitame capture` and `mitame run` execute, e.g. ["flutter", "test"]
+fonts = "real"             # Flutter only: "ahem" renders text as boxes so one baseline serves macOS and Linux
 
 [compare]
 threshold = 0.0            # allowed diff ratio (differing pixels / total pixels)
 max_diff_pixels = 0        # allowed differing pixels; the larger allowance applies
-pixel_tolerance = 0.1      # per-pixel YIQ tolerance, as in pixelmatch
 anti_aliasing = true       # ignore pixels that only differ by anti-aliasing
 
 [policy]
@@ -169,11 +180,21 @@ impl Config {
             .collect()
     }
 
+    pub fn pixel_tolerance(&self) -> f64 {
+        self.compare
+            .pixel_tolerance
+            .unwrap_or(if self.capture.fonts == "ahem" {
+                0.2
+            } else {
+                0.1
+            })
+    }
+
     pub fn effective(&self, matchers: &[(GlobMatcher, &Rule)], id: &str) -> EffectiveCompare {
         let mut out = EffectiveCompare {
             threshold: self.compare.threshold,
             max_diff_pixels: self.compare.max_diff_pixels,
-            pixel_tolerance: self.compare.pixel_tolerance,
+            pixel_tolerance: self.pixel_tolerance(),
             anti_aliasing: self.compare.anti_aliasing,
         };
         for (matcher, rule) in matchers {
@@ -281,5 +302,20 @@ mod template_tests {
             toml::to_string(&parsed).unwrap(),
             toml::to_string(&Config::default()).unwrap()
         );
+    }
+}
+
+#[cfg(test)]
+mod tolerance_tests {
+    use super::*;
+
+    #[test]
+    fn ahem_widens_the_pixel_tolerance_unless_set_explicitly() {
+        let mut config = Config::default();
+        assert_eq!(config.pixel_tolerance(), 0.1);
+        config.capture.fonts = "ahem".to_string();
+        assert_eq!(config.pixel_tolerance(), 0.2);
+        config.compare.pixel_tolerance = Some(0.05);
+        assert_eq!(config.pixel_tolerance(), 0.05);
     }
 }

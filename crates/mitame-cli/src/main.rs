@@ -118,6 +118,10 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
                     .join(", ");
                 text = text.replacen("command = []", &format!("command = [{rendered}]"), 1);
                 println!("detected test command: {}", command.join(" "));
+                if command[0] == "flutter" {
+                    text = flutter_defaults(&text);
+                    println!("flutter: fonts = \"ahem\" so one baseline serves macOS and Linux");
+                }
             } else {
                 println!("no test command detected; set [capture] command in mitame.toml");
             }
@@ -129,7 +133,7 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
         Command::Capture { common, capture } => {
             let (config, layout, project) = resolve(&common)?;
             let command = build_command(&config, &capture, &project)?;
-            let ok = run_capture(&layout, &command, capture.keep_current)?;
+            let ok = run_capture(&config, &layout, &command, capture.keep_current)?;
             Ok(if ok { EXIT_OK } else { EXIT_ERROR })
         }
         Command::Compare { common, update } => {
@@ -143,7 +147,7 @@ fn run() -> Result<u8, Box<dyn std::error::Error>> {
         } => {
             let (config, layout, project) = resolve(&common)?;
             let command = build_command(&config, &capture, &project)?;
-            let ok = run_capture(&layout, &command, capture.keep_current)?;
+            let ok = run_capture(&config, &layout, &command, capture.keep_current)?;
             let code = run_compare(&config, &layout, &update)?;
             Ok(if ok { code } else { EXIT_ERROR })
         }
@@ -252,6 +256,7 @@ fn build_command(
 }
 
 fn run_capture(
+    config: &Config,
     layout: &Layout,
     command: &[String],
     keep_current: bool,
@@ -272,7 +277,7 @@ fn run_capture(
             .unwrap_or(0),
         std::process::id()
     );
-    let vars = [
+    let mut vars = vec![
         (
             "MITAME_OUTPUT_DIR",
             output_dir.to_string_lossy().into_owned(),
@@ -280,6 +285,9 @@ fn run_capture(
         ("MITAME_PROFILE", layout.profile.clone()),
         ("MITAME_RUN_ID", run_id),
     ];
+    if config.capture.fonts == "ahem" {
+        vars.push(("MITAME_FONTS", "ahem".to_string()));
+    }
     let mut child = std::process::Command::new(&command[0]);
     child.args(&command[1..]);
     for (key, value) in &vars {
@@ -402,6 +410,10 @@ fn flutter_from_fvmrc(project: &Path, cache: Option<&Path>) -> Option<PathBuf> {
     candidate.exists().then_some(candidate)
 }
 
+fn flutter_defaults(text: &str) -> String {
+    text.replacen("fonts = \"real\"", "fonts = \"ahem\"", 1)
+}
+
 fn detect_capture_command(dir: &Path) -> Option<Vec<&'static str>> {
     if dir.join("pubspec.yaml").is_file() {
         return Some(vec!["flutter", "test"]);
@@ -488,6 +500,19 @@ mod tests {
         std::fs::create_dir_all(inner.join(".mitame").join("baseline")).unwrap();
         assert_eq!(find_project_dir(&leaf), Some(inner.clone()));
         assert_eq!(find_project_dir(&outer), Some(outer));
+    }
+
+    #[test]
+    fn flutter_defaults_switch_to_ahem_which_widens_the_tolerance() {
+        let text = flutter_defaults(CONFIG_TEMPLATE);
+        assert!(text.contains("fonts = \"ahem\""));
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mitame.toml");
+        std::fs::write(&path, &text).unwrap();
+        let config = Config::load(&path).unwrap();
+        assert_eq!(config.capture.fonts, "ahem");
+        assert_eq!(config.compare.pixel_tolerance, None);
+        assert_eq!(config.pixel_tolerance(), 0.2);
     }
 
     #[test]
