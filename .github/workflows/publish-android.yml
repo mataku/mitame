@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      tag:
+        description: "Push android-v<version> after a successful upload; turn off to verify secrets against a deployment you will drop"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -43,7 +48,7 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
         run: ./gradlew publishToMavenCentral --no-daemon
-      - if: ${{ !inputs.dry-run }}
+      - if: ${{ !inputs.dry-run && inputs.tag }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
