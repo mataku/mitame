@@ -35,6 +35,6 @@ The group defaults to the test class name in snake case (`login_form_test`, with
 mitame run    # [capture] command = ["./gradlew", ":example:testDebugUnitTest", "--rerun"]
 ```
 
-Snapshot builds are published to the Central Portal snapshot repository; to try one, add `maven("https://central.sonatype.com/repository/maven-snapshots/")` to the repositories and depend on `io.github.mataku:mitame-android:0.1.0-SNAPSHOT` (and `mitame-android-compose` for Compose).
+Snapshot builds are published to the Central Portal snapshot repository; to try one, add `maven("https://central.sonatype.com/repository/maven-snapshots/")` to the repositories and depend on `io.github.mataku:mitame-android:<version>-SNAPSHOT` (and `mitame-android-compose` for Compose), where the version is the `VERSION_NAME` in `adapters/android/gradle.properties`.
 
 See also the [Android example](../adapters/android/example/README.md).

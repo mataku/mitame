@@ -18,13 +18,15 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - run: |
+      - id: version
+        run: |
           version="$(sed -n 's/^VERSION_NAME=\(.*\)/\1/p' gradle.properties)"
           echo "android=$version"
           case "$version" in
             *-SNAPSHOT) ;;
             *) echo "VERSION_NAME must end with -SNAPSHOT; use publish-android for releases" >&2; exit 1 ;;
           esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - run: ./gradlew publishToMavenLocal -PsignAllPublications=false --no-daemon
       - env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.ORG_GRADLE_PROJECT_MAVENCENTRALUSERNAME }}
@@ -33,3 +35,19 @@ jobs:
           ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.ORG_GRADLE_PROJECT_SIGNINGINMEMORYKEYPASSWORD }}
         run: ./gradlew publishToMavenCentral --no-daemon
+      - run: |
+          base="https://central.sonatype.com/repository/maven-snapshots/io/github/mataku"
+          version="${{ steps.version.outputs.version }}"
+          {
+            echo "## Snapshot ${version}"
+            echo
+            echo "Repository: maven(\"https://central.sonatype.com/repository/maven-snapshots/\")"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          for artifact in mitame-android mitame-android-compose; do
+            url="$base/$artifact/$version/maven-metadata.xml"
+            build="$(curl -fsS "$url" | sed -n 's/.*<value>\(.*\)<\/value>.*/\1/p' | head -1)"
+            test -n "$build"
+            echo "$artifact: $url ($build)"
+            echo "- \`io.github.mataku:$artifact:$version\` resolves to $build ([metadata]($url))" >> "$GITHUB_STEP_SUMMARY"
+          done
