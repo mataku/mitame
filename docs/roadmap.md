@@ -12,19 +12,28 @@
 - [x] `mitame init` and project root discovery from subdirectories
 - [x] `mitame review [id]` opens the report in the browser
 - [x] sidecar `schema_version` check and `mitame_version` in `result.json`
-- [ ] prebuilt binaries on GitHub Releases (workflow in place, unpublished until the first tag)
-- [ ] Windows builds (in the release matrix, unverified)
+- [x] prebuilt binaries on GitHub Releases (`v0.1.0`, five targets) and a Homebrew tap (`mataku/tap/mitame`)
+- [ ] Windows builds (in the release matrix, never run; `capture` and `run` spawn without a shell, so `.bat` launchers must be named explicitly)
+- [ ] warn when the baseline and current sidecars disagree on `env.os`, the silent failure of comparing against the wrong profile
+- [ ] record the differing region's bounding box in `result.json` (the diff image already outlines it) so an agent can crop instead of reading a full-size screenshot
+- [ ] `compare --update --from <dir>` to apply a downloaded CI capture (for example the `linux` profile's `current/` from an artifact) to the local baseline, so the CI profile has an update path without the binary touching the network
+- [ ] a setup check (`mitame doctor` or similar): `.gitignore` entries, adapter present, Flutter resolution, profile
+- [ ] `mitame compare | head` panics on a closed stdout (broken pipe); ignore SIGPIPE or handle the write error
+- [ ] decide whether `captured_at` belongs in the committed baseline sidecar; every `--update` rewrites the sidecar because of it, doubling the files in a baseline diff
 
 ## Integrations
 
-- [ ] `mitame-report` GitHub Action that summarizes `result.json` as a pull request comment (separate repository, scaffolded but not published yet)
+- [ ] `mitame-report` GitHub Action that summarizes `result.json` as a pull request comment (separate repository, scaffolded locally, no remote yet; removed from docs/ci.md until it exists)
+- [ ] a short page consumers can paste into their agent instructions: run `mitame run`, read `result.json`, inspect the diff images, update only intended ids, never loosen thresholds, never `--prune` after a partial run
+- [ ] automate the Homebrew formula bump from `release.yml` (needs a token for the tap repository)
 
 ## Flutter
 
 - [x] `mitame_flutter` adapter depending on `flutter_test` only
 - [x] real fonts via `FontManifest.json` and the SDK's Roboto
 - [x] benchmark against stock `LocalFileComparator` (`mitame-bench`)
-- [ ] publish to pub.dev (`publish-flutter.yml` runs on `flutter-v*` tags once automated publishing is enabled for this repository on pub.dev)
+- [x] `mitame_flutter` 0.1.0 on pub.dev; later versions publish from `flutter-v*` tags
+- [ ] transfer the package to the `mataku.com` verified publisher (created, not yet assigned)
 
 ## iOS
 
@@ -35,6 +44,7 @@
 - [x] SwiftUI capture through `UIHostingController`
 - [x] size inference when `size:` is omitted
 - [ ] full-screen tier through `xcrun simctl io screenshot`
+- [ ] Swift Package Index listing, for discoverability and platform badges (optional)
 
 ## Android
 
@@ -42,10 +52,10 @@
 - [x] example module verified with Robolectric native graphics, no emulator
 - [x] density recorded as `scale` (3.0 under `xxhdpi`)
 - [x] Compose helper (`mitame-compose` module, `captureMitame` on a compose rule or semantics node)
-- [ ] publish to Maven Central (`maven-publish` configured for both modules; `publishToMavenLocal` works)
+- [x] `io.github.mataku:mitame-android` and `mitame-android-compose` 0.1.0 on Maven Central; later versions publish from `android-v*` tags and are released by hand on the portal, snapshots through `snapshot-android.yml`
 - [ ] instrumented-test tier (device or emulator, files pulled with adb)
 
-## After the first release
+## Later
 
 - [ ] a `setup` GitHub Action in its own repository, if the curl step in [CI](ci.md) proves too repetitive
 - [ ] Flutter: adapter for `@Preview`-based capture output, pending Flutter's own previewer gaining a capture command
