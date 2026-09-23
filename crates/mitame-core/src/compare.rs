@@ -90,15 +90,20 @@ fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> E
         message: None,
         captured_at: None,
     };
-    if current.exists() {
-        if let Ok(Some(sc)) = read_sidecar(&layout.current_sidecar(id)) {
-            if let Some(msg) = sidecar_problem("current", &sc, id) {
+    let current_sidecar = if current.exists() {
+        match checked_sidecar("current", &layout.current_sidecar(id), id) {
+            Ok(sc) => sc,
+            Err(msg) => {
                 entry.message = Some(msg);
                 return entry;
             }
-            entry.captured_at = sc.captured_at;
         }
-    }
+    } else {
+        None
+    };
+    entry.captured_at = current_sidecar
+        .as_ref()
+        .and_then(|sc| sc.captured_at.clone());
     match (baseline.exists(), current.exists()) {
         (false, false) => {
             entry.message = Some("neither baseline nor current exists".to_string());
@@ -114,13 +119,36 @@ fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> E
         }
         (true, true) => {}
     }
-    match compare_pair(layout, id, &baseline, &current, effective) {
+    let baseline_sidecar = match checked_sidecar("baseline", &layout.baseline_sidecar(id), id) {
+        Ok(sc) => sc,
+        Err(msg) => {
+            entry.message = Some(msg);
+            return entry;
+        }
+    };
+    let sidecars = (baseline_sidecar.as_ref(), current_sidecar.as_ref());
+    match compare_pair(layout, id, &baseline, &current, sidecars, effective) {
         Ok(filled) => filled(entry),
         Err(e) => {
             entry.status = Status::Error;
             entry.message = Some(e.to_string());
             entry
         }
+    }
+}
+
+fn checked_sidecar(
+    side: &str,
+    path: &Path,
+    id: &Identity,
+) -> std::result::Result<Option<Sidecar>, String> {
+    match read_sidecar(path) {
+        Ok(Some(sc)) => match sidecar_problem(side, &sc, id) {
+            Some(msg) => Err(msg),
+            None => Ok(Some(sc)),
+        },
+        Ok(None) => Ok(None),
+        Err(e) => Err(format!("{side} sidecar is invalid: {e}")),
     }
 }
 
@@ -131,6 +159,7 @@ fn compare_pair(
     id: &Identity,
     baseline: &Path,
     current: &Path,
+    sidecars: (Option<&Sidecar>, Option<&Sidecar>),
     effective: EffectiveCompare,
 ) -> Result<Fill> {
     let baseline_bytes = fs::read(baseline).map_err(|e| Error::io(baseline, e))?;
@@ -160,23 +189,7 @@ fn compare_pair(
             e
         }));
     }
-    let baseline_sidecar = read_sidecar(&layout.baseline_sidecar(id))?;
-    let current_sidecar = read_sidecar(&layout.current_sidecar(id))?;
-    for (side, sidecar) in [
-        ("baseline", &baseline_sidecar),
-        ("current", &current_sidecar),
-    ] {
-        if let Some(sc) = sidecar {
-            if let Some(msg) = sidecar_problem(side, sc, id) {
-                return Ok(Box::new(move |mut e| {
-                    e.status = Status::Error;
-                    e.message = Some(msg);
-                    e
-                }));
-            }
-        }
-    }
-    if let (Some(b), Some(c)) = (&baseline_sidecar, &current_sidecar) {
+    if let (Some(b), Some(c)) = sidecars {
         if (b.image.scale - c.image.scale).abs() > f64::EPSILON {
             let msg = format!(
                 "scale differs: baseline {}, current {}",

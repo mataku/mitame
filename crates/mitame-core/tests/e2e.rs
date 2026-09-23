@@ -25,6 +25,12 @@ fn status_of(layout: &Layout, config: &Config, id: &str) -> Status {
         .status
 }
 
+fn sidecar_json(id: &str, schema_version: u32) -> String {
+    format!(
+        r#"{{"schema_version":{schema_version},"id":"{id}","platform":"ios","capture":"widget","group":"","name":"x","variant":{{}},"image":{{"width":4,"height":4,"scale":1.0}}}}"#
+    )
+}
+
 #[test]
 fn compare_classifies_and_approve_promotes() {
     let dir = tempfile::tempdir().unwrap();
@@ -199,7 +205,11 @@ fn update_copies_added_entries_with_their_sidecars() {
     let current = |id: &str| layout.root.join("current/linux").join(format!("{id}.png"));
     write_png(&current("ios/x"), 4, 4, [0, 0, 0, 255], &[]);
     write_png(&current("ios/y"), 4, 4, [0, 0, 0, 255], &[]);
-    fs::write(layout.root.join("current/linux/ios/x.json"), "{}").unwrap();
+    fs::write(
+        layout.root.join("current/linux/ios/x.json"),
+        sidecar_json("ios/x", 1),
+    )
+    .unwrap();
 
     let outcome = compare(&config, &layout).unwrap();
     let updated = update_baseline(&layout, &outcome.result, false).unwrap();
@@ -397,4 +407,71 @@ fn diff_bounds_cover_the_differing_pixels_and_land_in_result_json() {
     );
     let same = results.iter().find(|e| e["id"] == "ios/a/same").unwrap();
     assert!(same.get("diff_bounds").is_none());
+}
+
+#[test]
+fn unreadable_current_sidecar_is_error_and_not_copied_on_update() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    let config = Config::default();
+    write_png(
+        &layout.root.join("current/default/ios/x.png"),
+        4,
+        4,
+        [0, 0, 0, 255],
+        &[],
+    );
+    fs::write(layout.root.join("current/default/ios/x.json"), "{}").unwrap();
+
+    let outcome = compare(&config, &layout).unwrap();
+    assert!(outcome.errored);
+    let entry = &outcome.result.results[0];
+    assert_eq!(entry.status, Status::Error);
+    assert!(entry
+        .message
+        .as_deref()
+        .unwrap()
+        .contains("current sidecar is invalid"));
+    let updated = update_baseline(&layout, &outcome.result, false).unwrap();
+    assert!(updated.added.is_empty());
+    assert!(!layout.root.join("baseline/default/ios/x.png").exists());
+}
+
+#[test]
+fn baseline_sidecar_problem_is_error_before_dimension_and_byte_checks() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    let config = Config::default();
+    let png = |side: &str, id: &str| {
+        layout
+            .root
+            .join(side)
+            .join("default")
+            .join(format!("{id}.png"))
+    };
+    let json = |id: &str| {
+        layout
+            .root
+            .join("baseline/default")
+            .join(format!("{id}.json"))
+    };
+    write_png(&png("baseline", "ios/resized"), 4, 4, [0, 0, 0, 255], &[]);
+    write_png(&png("current", "ios/resized"), 6, 4, [0, 0, 0, 255], &[]);
+    fs::write(json("ios/resized"), sidecar_json("ios/resized", 99)).unwrap();
+    write_png(&png("baseline", "ios/same"), 4, 4, [0, 0, 0, 255], &[]);
+    write_png(&png("current", "ios/same"), 4, 4, [0, 0, 0, 255], &[]);
+    fs::write(json("ios/same"), sidecar_json("ios/other", 1)).unwrap();
+
+    let outcome = compare(&config, &layout).unwrap();
+    let entry = |id: &str| outcome.result.results.iter().find(|e| e.id == id).unwrap();
+    let resized = entry("ios/resized");
+    assert_eq!(resized.status, Status::Error);
+    assert!(resized
+        .message
+        .as_deref()
+        .unwrap()
+        .contains("baseline sidecar has schema_version 99"));
+    let same = entry("ios/same");
+    assert_eq!(same.status, Status::Error);
+    assert!(same.message.as_deref().unwrap().contains("does not match"));
 }

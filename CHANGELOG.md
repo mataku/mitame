@@ -4,6 +4,7 @@ Sections are keyed by version; `release.yml` publishes the section matching the 
 
 ## Unreleased
 
+- A sidecar that cannot be parsed, or that names another identity or schema version, is now reported as `error` in every case. Before, an unparseable current sidecar was ignored for `added` screenshots (and copied into the baseline by `--update`), and a baseline sidecar was only checked after the byte-equality and dimension checks, so a bad baseline sidecar surfaced as `unchanged` or `mismatch`.
 - `result.json` entries with differing pixels carry `diff_bounds` (`x`, `y`, `width`, `height` in image pixels), the bounding box the diff image already outlines, so an agent can crop to the region instead of reading a full-size screenshot. Additive; `schema_version` stays 1.
 - `mitame compare | head` no longer panics with `Broken pipe` when the reader closes stdout early. Write errors on stdout are ignored, so a `--update` run still writes the baseline and the exit code still reflects the comparison.
 - Agent skills under `skills/`: `mitame-setup` guides a coding agent through installing the binary, `mitame init`, the platform adapter, the git rules, the first baseline, and the CI job; `mitame-review` through running `mitame run`, reading `result.json`, and updating the baseline for intended changes only. Installable with `npx skills add mataku/mitame`.
