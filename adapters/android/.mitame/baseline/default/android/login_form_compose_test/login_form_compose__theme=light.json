@@ -21,7 +21,6 @@
     "renderer": "robolectric",
     "ci": false
   },
-  "captured_at": "2026-09-21T13:42:13.194842Z",
   "ext": {
     "android": {}
   }

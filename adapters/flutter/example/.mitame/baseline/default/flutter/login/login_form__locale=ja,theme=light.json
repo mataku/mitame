@@ -21,12 +21,10 @@
     "sdk": "3.41.6",
     "ci": false
   },
-  "captured_at": "2026-09-22T10:04:22.562271Z",
   "ext": {
     "flutter": {
       "golden_uri": "login_form__locale=ja,theme=light.png",
-      "test_dir": "login",
-      "run_id": "1790071460943-28599"
+      "test_dir": "login"
     }
   }
 }

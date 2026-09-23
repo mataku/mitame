@@ -1,29 +1,24 @@
 {
-  "capture" : "widget",
-  "captured_at" : "2026-09-21T13:40:32Z",
-  "display_name" : "login_form_fitted",
-  "env" : {
-    "ci" : false,
-    "device" : "iPhone 16",
-    "os" : "ios",
-    "sdk" : "18.3.1"
+  "capture": "widget",
+  "display_name": "login_form_fitted",
+  "env": {
+    "ci": false,
+    "device": "iPhone 16",
+    "os": "ios",
+    "sdk": "18.3.1"
   },
-  "ext" : {
-    "ios" : {
-      "run_id" : "1789998025381-11534"
-    }
+  "ext": {
+    "ios": {}
   },
-  "group" : "login_form_swift_ui_tests",
-  "id" : "ios/login_form_swift_ui_tests/login_form_fitted",
-  "image" : {
-    "height" : 639,
-    "scale" : 3,
-    "width" : 1170
+  "group": "login_form_swift_ui_tests",
+  "id": "ios/login_form_swift_ui_tests/login_form_fitted",
+  "image": {
+    "height": 639,
+    "scale": 3,
+    "width": 1170
   },
-  "name" : "login_form_fitted",
-  "platform" : "ios",
-  "schema_version" : 1,
-  "variant" : {
-
-  }
+  "name": "login_form_fitted",
+  "platform": "ios",
+  "schema_version": 1,
+  "variant": {}
 }
