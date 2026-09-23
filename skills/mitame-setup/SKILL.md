@@ -21,7 +21,7 @@ Work through these steps in order. Each one leaves the project in a state you ca
 
 The project root is the directory that will hold `mitame.toml` and `.mitame/`. For Flutter it is the package directory with `pubspec.yaml`. For Android it is the Gradle root, not the module, because the example build script points capture output at the root project. For iOS it is the directory you run `xcodebuild` from. When the repository holds several apps, each gets its own root.
 
-Check for the binary with `mitame --version`. When it is missing, install it with `brew install mataku/tap/mitame` on macOS or Linux, or download the release archive for the platform from https://github.com/mataku/mitame/releases and put `mitame` on `PATH`. Do not build from source unless the user asks; the prebuilt binary is what CI will run.
+On Flutter, skip the install: `mitame_flutter` bundles the binary for macOS arm64 and Linux, so add the adapter from step 3 first and write every `mitame <command>` below as `dart run mitame_flutter:mitame <command>`. On Android and iOS, check for the binary with `mitame --version`; when it is missing, install it with `brew install mataku/tap/mitame` on macOS or Linux, or download the release archive for the platform from https://github.com/mataku/mitame/releases and put `mitame` on `PATH`.
 
 ### 2. Write `mitame.toml` with `mitame init`
 
@@ -59,7 +59,7 @@ Verify before moving on:
 
 Once the baseline is committed, delete the previous library's golden or snapshot files (`test/**/goldens/`, `__Snapshots__/`, and the like) in a commit of their own; nothing reads them any more, and leaving them invites someone to update the wrong set.
 
-Pin the adapter to the binary's version (`mitame_flutter: 0.1.0` rather than `^0.1.0` when the project does not commit `pubspec.lock`; an exact Maven or Swift package version otherwise) and bump both together. The sidecar carries a schema version, and a capture written for a newer schema than the binary reads is reported as `error` rather than compared; older schemas are read.
+On Flutter the launcher runs the binary bundled with the adapter, so `pubspec.lock` pins both. On Android and iOS, pin the adapter to the binary's version (an exact Maven or Swift package version) and bump both together. The sidecar carries a schema version, and a capture written for a newer schema than the binary reads is reported as `error` rather than compared; older schemas are read.
 
 ### 6. Add the CI job
 

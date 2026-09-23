@@ -8,6 +8,8 @@ The adapter is `mitame_flutter` on pub.dev and depends on `flutter_test` only.
 flutter pub add --dev mitame_flutter
 ```
 
+The package bundles the mitame binary for macOS arm64 and Linux (x64, arm64). Run every mitame command through it from the project root (`dart run mitame_flutter:mitame init`, `dart run mitame_flutter:mitame run`, and so on); no separate binary install is needed. On another platform, install the binary from source and set `MITAME_BINARY` to its path.
+
 Then install the comparator once per test run in `test/flutter_test_config.dart`, creating the file when the project has none (`flutter_test` loads it automatically from the `test/` directory):
 
 ```dart

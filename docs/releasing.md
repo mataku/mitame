@@ -7,7 +7,7 @@ Releases are cut by GitHub Actions only. A `v<version>` tag builds the binaries 
 ```sh
 cargo build
 cargo test
-cd adapters/flutter/example && ../../../target/debug/mitame run
+cd adapters/flutter/example && MITAME_BINARY=../../../target/debug/mitame dart run mitame_flutter:mitame run
 ```
 
 The workspace pins its Rust toolchain in `rust-toolchain.toml`. `bench/README.md` describes the benchmark harness and records its results.

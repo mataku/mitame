@@ -34,11 +34,15 @@ jobs:
         working-directory: adapters/flutter/example
       - run: dart analyze
         working-directory: adapters/flutter
-      - run: dart format --set-exit-if-changed -o none lib example/lib example/test
+      - run: dart format --set-exit-if-changed -o none lib bin test example/lib example/test
+        working-directory: adapters/flutter
+      - run: flutter test
         working-directory: adapters/flutter
       - run: cargo build --locked -p mitame-cli
-      - run: ../../../target/debug/mitame run
+      - run: dart run mitame_flutter:mitame run
         working-directory: adapters/flutter/example
+        env:
+          MITAME_BINARY: ${{ github.workspace }}/target/debug/mitame
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

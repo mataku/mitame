@@ -33,6 +33,7 @@
 - [x] benchmark against stock `LocalFileComparator` (`mitame-bench`)
 - [x] `mitame_flutter` 0.1.0 on pub.dev; later versions publish from `flutter-v*` tags
 - [x] one baseline for macOS and Linux through `fonts = "ahem"` (0 px between macOS and Linux on the example, one-word change 1728 px)
+- [x] `dart run mitame_flutter:mitame` runs the binary bundled with the package (macOS arm64, Linux x64/arm64), so Flutter projects need no separate install
 
 ## iOS
 

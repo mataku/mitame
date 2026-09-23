@@ -10,6 +10,7 @@ mitame is a visual regression testing tool: a Rust binary (`crates/`) that compa
 
 - The binary stops at `.mitame/report/`. It never talks to object storage, the GitHub API, or any hosted service. Uploading and pull request comments are CI concerns.
 - Each adapter depends only on its platform SDK: `flutter_test` for Flutter, the Android SDK for `adapters/android/mitame` (Compose support lives in the separate `mitame-compose` module), UIKit/SwiftUI/Foundation for iOS. Do not add third-party packages to an adapter. The `com.vanniktech.maven.publish` Gradle plugin is a build-time exception that only drives Maven Central publishing.
+- `mitame_flutter` also ships a launcher, `dart run mitame_flutter:mitame`, which runs the binary bundled under `adapters/flutter/native/<target>/mitame` for the release named in `adapters/flutter/binary_version`. The launcher never uses the network, `native/` is filled only by `publish-flutter.yml` and never committed, and `MITAME_BINARY` is the launcher's only input; this repository sets it to `target/debug/mitame` to run the example.
 - Adapters read exactly `MITAME_OUTPUT_DIR`, `MITAME_PROFILE`, `MITAME_RUN_ID`, and (Flutter only) `MITAME_FONTS`. New behavior is configured on the binary side (`mitame.toml`), not by adding adapter inputs.
 - Changing the sidecar or `result.json` shape means updating `crates/mitame-contract`, regenerating `schema/` with `cargo run -p mitame-cli -- schema`, and mirroring the change in all three adapters. Additive fields do not bump `schema_version`; renames and removals do.
 - The binary keeps reading every older sidecar `schema_version`; it reads only `id`, `image.scale`, and `captured_at`, so renaming or removing one of those needs a per-version reader in `crates/mitame-core/src/sidecar.rs`.
@@ -21,8 +22,8 @@ mitame is a visual regression testing tool: a Rust binary (`crates/`) that compa
 
 ```sh
 cargo build && cargo test && cargo clippy --all-targets -- -D warnings && cargo fmt --all -- --check
-cd adapters/flutter && dart analyze && dart format --set-exit-if-changed -o none lib example/lib example/test
-cd adapters/flutter/example && ../../../target/debug/mitame run
+cd adapters/flutter && dart analyze && dart format --set-exit-if-changed -o none lib bin test example/lib example/test && flutter test
+cd adapters/flutter/example && MITAME_BINARY=../../../target/debug/mitame dart run mitame_flutter:mitame run
 cd adapters/android && ../../target/debug/mitame run
 cd adapters/ios && ../../target/debug/mitame run -- xcodebuild test -scheme Mitame -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.3.1'
 ```

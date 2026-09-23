@@ -20,6 +20,10 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 
 Then run `mitame run` (or `flutter test` followed by `mitame compare`). See the repository README for the binary, configuration, profiles, and CI usage.
 
+## Running mitame
+
+The package bundles the mitame binary for macOS arm64 and Linux (x64, arm64). Run it from the project root with `dart run mitame_flutter:mitame`, for example `dart run mitame_flutter:mitame init` and `dart run mitame_flutter:mitame run`; the binary version is pinned by `pubspec.lock` together with this package. On other platforms, install the binary from source (`cargo install --git https://github.com/mataku/mitame mitame-cli`) and set `MITAME_BINARY` to its path; the launcher then runs that binary instead.
+
 ## API
 
 - `Mitame.install({loadFonts, groupFromGoldenUri})` replaces the comparator; `loadFonts: true` loads the fonts declared in `pubspec.yaml` and the SDK's Roboto so goldens render real glyphs.
