@@ -22,7 +22,7 @@ Flutter teams first: the golden churn on SDK upgrades is the problem mitame was 
 
 ## Status
 
-0.1.0 is the first release. The end-to-end flow (`mitame run` around the test command, `mitame compare` with an HTML report, `--update` into the baseline) works for the Flutter, Android, and iOS example projects in this repository. The adapters are not yet published as packages. See the [roadmap](docs/roadmap.md).
+0.1.0 is the first release. The end-to-end flow (`mitame run` around the test command, `mitame compare` with an HTML report, `--update` into the baseline) works for the Flutter, Android, and iOS example projects in this repository. The adapters are published as packages (`mitame_flutter` on pub.dev, `mitame-android` and `mitame-android-compose` on Maven Central, the Swift package from this repository's tags). See the [roadmap](docs/roadmap.md).
 
 ## Install
 
