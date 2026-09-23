@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 env:
-  MITAME_VERSION: 0.1.0
+  MITAME_VERSION: 0.2.0
 
 steps:
   - run: |
@@ -54,7 +54,7 @@ permissions:
   pull-requests: write
 
 env:
-  MITAME_VERSION: 0.1.0
+  MITAME_VERSION: 0.2.0
 
 steps:
   - run: |

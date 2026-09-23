@@ -18,7 +18,7 @@ Screenshots compare across machines only when the same rasterizer draws them.
 
 ## GitHub Actions job
 
-Install the binary from the release archive after the platform toolchain, except a Flutter project on `mitame_flutter` newer than 0.1.0, where the binary comes bundled with the adapter and `pubspec.lock` pins it instead. Run the test command through `mitame run` from the project root, and upload the report. Pin the mitame version so a new release does not change a passing job, and pin the Flutter or JDK version to the one the baseline was captured with, since a toolchain upgrade is exactly the kind of change the baseline is meant to surface. A complete workflow for a Flutter project:
+On Flutter with `mitame_flutter` newer than 0.1.0, the binary comes bundled with the adapter and `pubspec.lock` pins it, so the job needs no install step; on Android and iOS, install the binary from the release archive after the platform toolchain. Run the test command through `mitame run` from the project root, and upload the report. Pin the mitame version (through `pubspec.lock` or the archive version) so a new release does not change a passing job, and pin the Flutter or JDK version to the one the baseline was captured with, since a toolchain upgrade is exactly the kind of change the baseline is meant to surface. A complete workflow for a Flutter project:
 
 ```yaml
 name: vrt
@@ -32,7 +32,6 @@ permissions:
   contents: read
 
 env:
-  MITAME_VERSION: 0.1.0
   FLUTTER_VERSION: 3.41.6
 
 jobs:
@@ -45,13 +44,8 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - run: |
-          curl -fsSL "https://github.com/mataku/mitame/releases/download/v${MITAME_VERSION}/mitame-x86_64-unknown-linux-musl.tar.gz" | tar xz
-          sudo mv mitame-x86_64-unknown-linux-musl/mitame /usr/local/bin/
       - run: flutter pub get
-      - run: mitame run
-        env:
-          MITAME_FONTS: ahem
+      - run: dart run mitame_flutter:mitame run
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -59,9 +53,20 @@ jobs:
           path: .mitame/report
 ```
 
-With `mitame_flutter` newer than 0.1.0, drop the install step and `MITAME_VERSION` and run `dart run mitame_flutter:mitame run` after `flutter pub get`, since the binary comes with the adapter at the version `pubspec.lock` pins.
+For Android and iOS, or a Flutter project still on `mitame_flutter` 0.1.0, install the binary before running it and call `mitame run` directly:
 
-The `MITAME_FONTS` line is the workaround for binary 0.1.0, which ignores `[capture] fonts`; check which binary the project actually runs with `mitame --version`, or `dart run mitame_flutter:mitame --version` when using the launcher, and drop the line once that reports a version newer than 0.1.0, since that binary sets `MITAME_FONTS` itself. Without it, the Linux runner renders real glyphs against an Ahem baseline and reports every entry as `changed`.
+```yaml
+env:
+  MITAME_VERSION: 0.2.0
+
+steps:
+  - run: |
+      curl -fsSL "https://github.com/mataku/mitame/releases/download/v${MITAME_VERSION}/mitame-x86_64-unknown-linux-musl.tar.gz" | tar xz
+      sudo mv mitame-x86_64-unknown-linux-musl/mitame /usr/local/bin/
+  - run: mitame run
+```
+
+A Flutter project that runs binary 0.1.0 (check with `mitame --version`) also needs `MITAME_FONTS: ahem` in the `env:` of the `mitame run` step, since that binary ignores `[capture] fonts`. Without it, the Linux runner renders real glyphs against an Ahem baseline and reports every entry as `changed`.
 
 For Android, replace the Flutter step with `actions/setup-java@v5` (Temurin, the project's JDK) and run `mitame run -- --no-daemon`; Gradle wrapper and Robolectric downloads are cached by the usual Gradle caching action. For iOS, use a `macos-*` runner, the `mitame-aarch64-apple-darwin.tar.gz` archive, and `mitame run --profile <ci-profile> -- xcodebuild test …` as in `references/ios.md`. Match the action versions to what the project already pins (a project that pins actions by commit SHA keeps doing so), and add `working-directory:` to the `run` steps when the project root is not the repository root.
 
