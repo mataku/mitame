@@ -49,7 +49,7 @@ On GitHub Actions, the same `curl` step installs the Linux archive in a few seco
 
 Adapters:
 
-- Flutter: [`mitame_flutter`](https://pub.dev/packages/mitame_flutter) on pub.dev: `flutter pub add --dev mitame_flutter`. It bundles the binary for macOS arm64 and Linux, so a Flutter project needs no separate install and runs it as `dart run mitame_flutter:mitame`.
+- Flutter: [`mitame_flutter`](https://pub.dev/packages/mitame_flutter) on pub.dev: `flutter pub add --dev mitame_flutter`. Newer than 0.1.0, it bundles the binary for macOS arm64 and Linux, so a Flutter project needs no separate install and runs it as `dart run mitame_flutter:mitame`; with 0.1.0, install the binary as below.
 - Android: [`io.github.mataku:mitame-android`](https://central.sonatype.com/artifact/io.github.mataku/mitame-android) and [`io.github.mataku:mitame-android-compose`](https://central.sonatype.com/artifact/io.github.mataku/mitame-android-compose) on Maven Central: `testImplementation("io.github.mataku:mitame-android:0.1.0")`.
 - iOS: a Swift package exposed through the repository's root `Package.swift`.
 
@@ -59,7 +59,7 @@ Adapters:
 
 ## Quick start
 
-Install the binary (in a Flutter project, `dart run mitame_flutter:mitame` stands in for `mitame` below and needs no install), then in the repository:
+Install the binary (in a Flutter project on `mitame_flutter` newer than 0.1.0, `dart run mitame_flutter:mitame` stands in for `mitame` below and needs no install), then in the repository:
 
 ```sh
 mitame init             # writes mitame.toml with the detected test command (flutter test, ./gradlew test --rerun)
