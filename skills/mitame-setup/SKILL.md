@@ -2,7 +2,7 @@
 name: mitame-setup
 description: Set up mitame, the visual regression testing tool for Flutter, Android, and iOS (a Rust binary that compares screenshots against a baseline committed to git, writes a diff report, and updates the baseline through git), in a project that does not have it yet. Use this whenever the user wants to add, adopt, migrate to, or wire up mitame, wants screenshot, golden, or snapshot tests with a reviewable baseline and CI job, mentions replacing golden_toolkit, alchemist, Roborazzi, Paparazzi, or swift-snapshot-testing with mitame, or asks why a mitame baseline captured on macOS does not pass on Linux CI. It covers installing the binary, mitame init, the per-platform capture adapter, the .gitignore and baseline commit rules, the first baseline, and the GitHub Actions job.
 metadata:
-  mitame-version: "0.1.0"
+  mitame-version: "0.2.0"
   mitame-flutter-version: "0.1.0"
   mitame-android-version: "0.1.0"
 ---

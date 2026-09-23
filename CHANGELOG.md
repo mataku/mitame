@@ -2,7 +2,7 @@
 
 Sections are keyed by version; `release.yml` publishes the section matching the pushed `v<version>` tag as the release notes.
 
-## Unreleased
+## 0.2.0
 
 - Release binaries are about a third smaller (1.45 MB instead of 2.33 MB on macOS arm64): the release profile optimizes for size with `opt-level = "z"` and `panic = "abort"`, while the PNG decoding and diff crates keep `opt-level = 3`, so a 120-screenshot comparison takes 0.29 s instead of 0.25 s with byte-identical results. A panic now aborts the process (exit status 134) instead of unwinding (exit code 101).
 - `mitame_flutter` bundles the binary and runs it through `dart run mitame_flutter:mitame`, so Flutter projects need no separate install; see `adapters/flutter/CHANGELOG.md`.

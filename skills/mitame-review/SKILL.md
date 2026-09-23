@@ -2,7 +2,7 @@
 name: mitame-review
 description: Run a mitame visual regression check, read its result.json and diff images, and update the committed baseline only for intended changes. Use this whenever a project has a mitame.toml or a .mitame/baseline/ directory and the user asks to run the screenshot, golden, or snapshot tests, check for visual regressions, see what changed visually, review or accept a diff, update or approve the baseline, or explain why mitame run or mitame compare exited 1 or 2 locally or in CI. Also use it before committing a UI change in such a project, since the baseline must move with the change.
 metadata:
-  mitame-version: "0.1.0"
+  mitame-version: "0.2.0"
 ---
 
 # Running and reviewing mitame
