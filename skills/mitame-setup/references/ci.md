@@ -61,7 +61,7 @@ jobs:
 
 With `mitame_flutter` newer than 0.1.0, drop the install step and `MITAME_VERSION` and run `dart run mitame_flutter:mitame run` after `flutter pub get`, since the binary comes with the adapter at the version `pubspec.lock` pins.
 
-The `MITAME_FONTS` line is the workaround for binary 0.1.0, which ignores `[capture] fonts`; drop it once `MITAME_VERSION` names a release that sets the variable itself. Without it, the Linux runner renders real glyphs against an Ahem baseline and reports every entry as `changed`.
+The `MITAME_FONTS` line is the workaround for binary 0.1.0, which ignores `[capture] fonts`; check which binary the project actually runs with `mitame --version`, or `dart run mitame_flutter:mitame --version` when using the launcher, and drop the line once that reports a version newer than 0.1.0, since that binary sets `MITAME_FONTS` itself. Without it, the Linux runner renders real glyphs against an Ahem baseline and reports every entry as `changed`.
 
 For Android, replace the Flutter step with `actions/setup-java@v5` (Temurin, the project's JDK) and run `mitame run -- --no-daemon`; Gradle wrapper and Robolectric downloads are cached by the usual Gradle caching action. For iOS, use a `macos-*` runner, the `mitame-aarch64-apple-darwin.tar.gz` archive, and `mitame run --profile <ci-profile> -- xcodebuild test …` as in `references/ios.md`. Match the action versions to what the project already pins (a project that pins actions by commit SHA keeps doing so), and add `working-directory:` to the `run` steps when the project root is not the repository root.
 
