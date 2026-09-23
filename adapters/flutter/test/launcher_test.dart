@@ -79,15 +79,41 @@ void main() {
     );
   });
 
-  test('an unsupported ABI explains how to get a binary', () {
+  test(
+      'an unsupported ABI without a pinned binary_version installs from git HEAD',
+      () {
     expect(
       () => resolveBinary(
           environment: const {}, abi: Abi.windowsX64, packageRoot: root),
       throwsA(isA<LauncherUnavailable>().having(
         (e) => e.message,
         'message',
-        allOf(contains('windows_x64'), contains('MITAME_BINARY'),
-            contains('cargo install')),
+        allOf(
+          contains('windows_x64'),
+          contains('MITAME_BINARY'),
+          contains(
+              'cargo install --git https://github.com/mataku/mitame mitame-cli'),
+          isNot(contains('Homebrew')),
+        ),
+      )),
+    );
+  });
+
+  test('an unsupported ABI with a pinned binary_version pins the git tag', () {
+    File([root.path, 'binary_version'].join(Platform.pathSeparator))
+        .writeAsStringSync('0.2.0\n');
+    expect(
+      () => resolveBinary(
+          environment: const {}, abi: Abi.windowsX64, packageRoot: root),
+      throwsA(isA<LauncherUnavailable>().having(
+        (e) => e.message,
+        'message',
+        allOf(
+          contains('windows_x64'),
+          contains('MITAME_BINARY'),
+          contains(
+              'cargo install --git https://github.com/mataku/mitame --tag v0.2.0 mitame-cli'),
+        ),
       )),
     );
   });
@@ -101,8 +127,20 @@ void main() {
       throwsA(isA<LauncherUnavailable>().having(
         (e) => e.message,
         'message',
-        allOf(contains(expected), contains('MITAME_BINARY')),
+        allOf(contains(expected), contains('MITAME_BINARY'),
+            contains('Homebrew')),
       )),
+    );
+  });
+
+  test(
+      'bundling only the Linux target and resolving macOS reports the '
+      'bundle is missing', () {
+    bundle('x86_64-unknown-linux-musl');
+    expect(
+      () => resolveBinary(
+          environment: const {}, abi: Abi.macosArm64, packageRoot: root),
+      throwsA(isA<LauncherUnavailable>()),
     );
   });
 

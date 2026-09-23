@@ -9,7 +9,7 @@ const Map<Abi, String> mitameTargets = {
   Abi.linuxArm64: 'aarch64-unknown-linux-musl',
 };
 
-const String _install =
+const String _installFromRelease =
     'Install mitame with Homebrew (brew install mataku/tap/mitame) or from source '
     '(cargo install --git https://github.com/mataku/mitame mitame-cli), then set '
     '$binaryEnv to its path.';
@@ -21,6 +21,20 @@ class LauncherUnavailable implements Exception {
 
   @override
   String toString() => message;
+}
+
+String _installFromGit(Directory packageRoot) {
+  final versionFile =
+      File([packageRoot.path, 'binary_version'].join(Platform.pathSeparator));
+  var tag = '';
+  if (versionFile.existsSync()) {
+    final version = versionFile.readAsStringSync().trim();
+    if (version.isNotEmpty) {
+      tag = ' --tag v$version';
+    }
+  }
+  return 'Install mitame with cargo install --git https://github.com/mataku/mitame$tag '
+      'mitame-cli, then set $binaryEnv to its path.';
 }
 
 String resolveBinary({
@@ -35,14 +49,15 @@ String resolveBinary({
   final target = mitameTargets[abi];
   if (target == null) {
     throw LauncherUnavailable(
-        'mitame_flutter bundles no mitame binary for $abi. $_install');
+        'mitame_flutter bundles no mitame binary for $abi. '
+        '${_installFromGit(packageRoot)}');
   }
   final file = File([packageRoot.path, 'native', target, 'mitame']
       .join(Platform.pathSeparator));
   if (!file.existsSync()) {
     throw LauncherUnavailable(
         'mitame_flutter has no bundled binary at ${file.path}; bundled binaries '
-        'are only present in the package published to pub.dev. $_install');
+        'are only present in the package published to pub.dev. $_installFromRelease');
   }
   return file.path;
 }
