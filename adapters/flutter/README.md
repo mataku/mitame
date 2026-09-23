@@ -18,7 +18,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 }
 ```
 
-Then run `mitame run` (or `flutter test` followed by `mitame compare`). See the repository README for the binary, configuration, profiles, and CI usage.
+Then run `dart run mitame_flutter:mitame run` (or `flutter test` followed by `dart run mitame_flutter:mitame compare`); with `mitame_flutter` 0.1.0, run `mitame run` (or `mitame compare`) instead. See the repository README for the binary, configuration, profiles, and CI usage.
 
 ## Running mitame
 
