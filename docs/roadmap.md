@@ -19,7 +19,7 @@
 - [ ] `compare --update --from <dir>` to apply a downloaded CI capture (for example the `linux` profile's `current/` from an artifact) to the local baseline, so the CI profile has an update path without the binary touching the network
 - [ ] a setup check (`mitame doctor` or similar): `.gitignore` entries, adapter present, Flutter resolution, profile
 - [x] `mitame compare | head` no longer panics on a closed stdout; stdout write errors are ignored so `--update` still completes
-- [ ] decide whether `captured_at` belongs in the committed baseline sidecar; every `--update` rewrites the sidecar because of it, doubling the files in a baseline diff
+- [x] `--update` drops the per-run fields (`captured_at`, `ext.<platform>.run_id`) from the baseline sidecar, so a baseline sidecar only changes when the image size, scale, or capture environment does
 
 ## Integrations
 

@@ -475,3 +475,55 @@ fn baseline_sidecar_problem_is_error_before_dimension_and_byte_checks() {
     assert_eq!(same.status, Status::Error);
     assert!(same.message.as_deref().unwrap().contains("does not match"));
 }
+
+#[test]
+fn update_drops_per_run_fields_from_baseline_sidecars() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    let config = Config::default();
+    let png = |side: &str| layout.root.join(side).join("default/flutter/a/x.png");
+    let json = |side: &str| layout.root.join(side).join("default/flutter/a/x.json");
+    let sidecar = |stamp: &str, run: &str| {
+        format!(
+            r#"{{"schema_version":1,"id":"flutter/a/x","platform":"flutter","capture":"widget","group":"a","name":"x","variant":{{}},"image":{{"width":4,"height":4,"scale":1.0}},"env":{{"os":"macos","sdk":"3.41.6"}},"captured_at":"{stamp}","ext":{{"flutter":{{"golden_uri":"goldens/x.png","run_id":"{run}"}}}}}}"#
+        )
+    };
+
+    write_png(&png("current"), 4, 4, [0, 0, 0, 255], &[]);
+    fs::write(json("current"), sidecar("t1", "r1")).unwrap();
+    let outcome = compare(&config, &layout).unwrap();
+    update_baseline(&layout, &outcome.result, false).unwrap();
+    let first = fs::read_to_string(json("baseline")).unwrap();
+    assert!(!first.contains("captured_at"));
+    assert!(!first.contains("run_id"));
+    let keys: Vec<String> = serde_json::from_str::<serde_json::Value>(&first)
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .keys()
+        .cloned()
+        .collect();
+    assert_eq!(
+        keys,
+        [
+            "schema_version",
+            "id",
+            "platform",
+            "capture",
+            "group",
+            "name",
+            "variant",
+            "image",
+            "env",
+            "ext"
+        ]
+    );
+    assert!(first.contains(r#""golden_uri": "goldens/x.png""#));
+
+    write_png(&png("current"), 4, 4, [0, 0, 0, 255], &[(0, 0)]);
+    fs::write(json("current"), sidecar("t2", "r2")).unwrap();
+    let outcome = compare(&config, &layout).unwrap();
+    assert_eq!(outcome.result.results[0].status, Status::Changed);
+    update_baseline(&layout, &outcome.result, false).unwrap();
+    assert_eq!(fs::read_to_string(json("baseline")).unwrap(), first);
+}

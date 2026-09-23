@@ -4,6 +4,7 @@ Sections are keyed by version; `release.yml` publishes the section matching the 
 
 ## Unreleased
 
+- `mitame compare --update` drops `captured_at` and `ext.<platform>.run_id` from the sidecars it writes into the baseline, keeping the adapter's key order, so an updated screenshot no longer rewrites its sidecar on every run. Existing baseline sidecars lose those two fields the next time their screenshot is updated; nothing needs to be regenerated.
 - A sidecar that cannot be parsed, or that names another identity or schema version, is now reported as `error` in every case. Before, an unparseable current sidecar was ignored for `added` screenshots (and copied into the baseline by `--update`), and a baseline sidecar was only checked after the byte-equality and dimension checks, so a bad baseline sidecar surfaced as `unchanged` or `mismatch`.
 - `result.json` entries with differing pixels carry `diff_bounds` (`x`, `y`, `width`, `height` in image pixels), the bounding box the diff image already outlines, so an agent can crop to the region instead of reading a full-size screenshot. Additive; `schema_version` stays 1.
 - `mitame compare | head` no longer panics with `Broken pipe` when the reader closes stdout early. Write errors on stdout are ignored, so a `--update` run still writes the baseline and the exit code still reflects the comparison.
