@@ -42,6 +42,8 @@ steps:
 
 `compare` exits 1 when anything changed, which fails the job; the uploaded `report/` opens as a standalone page. The binary itself stops at `report/`: it does not talk to object storage or the GitHub API, and baselines live in git (plain or git-lfs).
 
+With `mitame_flutter` newer than 0.1.0, drop the install step for a Flutter project: after `flutter pub get`, run `dart run mitame_flutter:mitame run`, which uses the binary bundled with the adapter at the version `pubspec.lock` pins.
+
 ## Pull request comment
 
 `result.json` is small and stable (its schema is `schema/result.schema.json`), so a pull request comment needs nothing beyond `jq` and `gh`, both preinstalled on GitHub-hosted runners. The step below renders the summary counts and every entry that is not `unchanged` into Markdown, then creates one comment per job and profile and edits that same comment on later pushes, so a pull request never accumulates stale reports. It runs after the report upload and links to the artifact, since the comment carries text only: the diff images stay in `report/`.

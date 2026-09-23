@@ -15,10 +15,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: |
           cargo_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
-          pub_version="$(sed -n 's/^version: \(.*\)/\1/p' adapters/flutter/pubspec.yaml)"
           android_version="$(sed -n 's/^VERSION_NAME=\(.*\)/\1/p' adapters/android/gradle.properties)"
-          echo "ref=$GITHUB_REF cargo=$cargo_version pubspec=$pub_version android=$android_version"
-          test "$cargo_version" = "$pub_version"
+          echo "ref=$GITHUB_REF cargo=$cargo_version android=$android_version"
           case "$android_version" in
             "$cargo_version"|"$cargo_version-SNAPSHOT") ;;
             *) echo "android VERSION_NAME must be $cargo_version or $cargo_version-SNAPSHOT" >&2; exit 1 ;;

@@ -18,7 +18,7 @@ Screenshots compare across machines only when the same rasterizer draws them.
 
 ## GitHub Actions job
 
-Install the binary from the release archive after the platform toolchain, run the test command through `mitame run` from the project root, and upload the report. Pin the mitame version so a new release does not change a passing job, and pin the Flutter or JDK version to the one the baseline was captured with, since a toolchain upgrade is exactly the kind of change the baseline is meant to surface. A complete workflow for a Flutter project:
+Install the binary from the release archive after the platform toolchain, except a Flutter project on `mitame_flutter` newer than 0.1.0, where the binary comes bundled with the adapter and `pubspec.lock` pins it instead. Run the test command through `mitame run` from the project root, and upload the report. Pin the mitame version so a new release does not change a passing job, and pin the Flutter or JDK version to the one the baseline was captured with, since a toolchain upgrade is exactly the kind of change the baseline is meant to surface. A complete workflow for a Flutter project:
 
 ```yaml
 name: vrt
@@ -58,6 +58,8 @@ jobs:
           name: mitame-report
           path: .mitame/report
 ```
+
+With `mitame_flutter` newer than 0.1.0, drop the install step and `MITAME_VERSION` and run `dart run mitame_flutter:mitame run` after `flutter pub get`, since the binary comes with the adapter at the version `pubspec.lock` pins.
 
 The `MITAME_FONTS` line is the workaround for binary 0.1.0, which ignores `[capture] fonts`; drop it once `MITAME_VERSION` names a release that sets the variable itself. Without it, the Linux runner renders real glyphs against an Ahem baseline and reports every entry as `changed`.
 
