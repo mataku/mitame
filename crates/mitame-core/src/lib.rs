@@ -4,6 +4,7 @@ mod diff;
 mod error;
 mod layout;
 mod report;
+mod sidecar;
 mod update;
 
 pub use compare::{compare, CompareOutcome};

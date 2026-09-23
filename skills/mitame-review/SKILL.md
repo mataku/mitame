@@ -34,7 +34,7 @@ Read `.mitame/report/result.json` before opening any image. Its `summary` counts
 - `mismatch`: the dimensions or the scale differ. This is a device, density, or profile problem, not a pixel change; check which simulator, density qualifier, or profile produced the capture before treating it as a UI change.
 - `added`: no baseline entry. Expected for a new screenshot; suspicious for a renamed one, which appears as one `added` and one `removed`.
 - `removed`: no current capture. After a full run this means the test was deleted or renamed, or the capture command skipped it (a Gradle task without `--rerun`, a filtered test run without `--keep-current`).
-- `error`: the sidecar could not be read or was written for another schema version; the `message` names the cause, which is usually a binary and adapter version mismatch.
+- `error`: the sidecar could not be read, names another identity, or was written for a newer schema version than the binary; the `message` names the cause, which is usually a binary and adapter version mismatch.
 
 `mitame review` opens the report in the browser, and `mitame review <id>` opens the viewer at one screenshot with baseline, current, diff, and an onion-skin overlay; offer it to the user when a decision needs their eyes.
 

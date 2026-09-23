@@ -431,7 +431,7 @@ fn unreadable_current_sidecar_is_error_and_not_copied_on_update() {
         .message
         .as_deref()
         .unwrap()
-        .contains("current sidecar is invalid"));
+        .contains("current sidecar has no integer schema_version"));
     let updated = update_baseline(&layout, &outcome.result, false).unwrap();
     assert!(updated.added.is_empty());
     assert!(!layout.root.join("baseline/default/ios/x.png").exists());
@@ -526,4 +526,141 @@ fn update_drops_per_run_fields_from_baseline_sidecars() {
     assert_eq!(outcome.result.results[0].status, Status::Changed);
     update_baseline(&layout, &outcome.result, false).unwrap();
     assert_eq!(fs::read_to_string(json("baseline")).unwrap(), first);
+}
+
+fn one_entry(layout: &Layout) -> mitame_contract::Entry {
+    let outcome = compare(&Config::default(), layout).unwrap();
+    assert_eq!(outcome.result.results.len(), 1);
+    outcome.result.results[0].clone()
+}
+
+fn pair_with_current_sidecar(json: &str) -> (tempfile::TempDir, Layout) {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    for side in ["baseline", "current"] {
+        write_png(
+            &layout.root.join(side).join("default/ios/x.png"),
+            4,
+            4,
+            [0, 0, 0, 255],
+            &[],
+        );
+    }
+    fs::write(layout.root.join("current/default/ios/x.json"), json).unwrap();
+    (dir, layout)
+}
+
+#[test]
+fn invalid_json_sidecar_is_error() {
+    for json in ["", "<<<<<<< HEAD\n{}"] {
+        let (_dir, layout) = pair_with_current_sidecar(json);
+        let entry = one_entry(&layout);
+        assert_eq!(entry.status, Status::Error);
+        assert!(entry
+            .message
+            .as_deref()
+            .unwrap()
+            .contains("current sidecar is not valid JSON"));
+
+        let (_dir, layout) = pair_with_current_sidecar(&sidecar_json("ios/x", 1));
+        fs::write(layout.root.join("baseline/default/ios/x.json"), json).unwrap();
+        let entry = one_entry(&layout);
+        assert_eq!(entry.status, Status::Error);
+        assert!(entry
+            .message
+            .as_deref()
+            .unwrap()
+            .contains("baseline sidecar is not valid JSON"));
+    }
+}
+
+#[test]
+fn sidecar_that_is_not_an_object_is_error() {
+    for json in ["[]", "null", r#"{"schema_version":"1","id":"ios/x"}"#] {
+        let (_dir, layout) = pair_with_current_sidecar(json);
+        let entry = one_entry(&layout);
+        assert_eq!(entry.status, Status::Error, "{json}");
+        assert!(entry
+            .message
+            .as_deref()
+            .unwrap()
+            .contains("current sidecar has no integer schema_version"));
+    }
+}
+
+#[test]
+fn newer_sidecar_reports_schema_version_before_field_errors() {
+    let (_dir, layout) = pair_with_current_sidecar(&sidecar_json("ios/x", 1));
+    fs::write(
+        layout.root.join("baseline/default/ios/x.json"),
+        r#"{"schema_version":2,"identity":"ios/x","size":{"w":4,"h":4}}"#,
+    )
+    .unwrap();
+    let entry = one_entry(&layout);
+    assert_eq!(entry.status, Status::Error);
+    let message = entry.message.unwrap();
+    assert!(
+        message.contains("baseline sidecar has schema_version 2"),
+        "{message}"
+    );
+    assert!(message.contains("update the binary"), "{message}");
+}
+
+#[test]
+fn older_sidecar_is_read_and_compared() {
+    let (_dir, layout) = pair_with_current_sidecar(
+        r#"{"schema_version":0,"id":"ios/x","image":{"width":4,"height":4,"scale":1.0},"legacy":{"kept":true},"captured_at":"t0"}"#,
+    );
+    let entry = one_entry(&layout);
+    assert_eq!(entry.status, Status::Unchanged);
+    assert_eq!(entry.captured_at.as_deref(), Some("t0"));
+}
+
+#[test]
+fn sidecar_missing_a_read_field_is_error() {
+    let (_dir, layout) =
+        pair_with_current_sidecar(r#"{"schema_version":1,"id":"ios/x","image":{"width":4}}"#);
+    let entry = one_entry(&layout);
+    assert_eq!(entry.status, Status::Error);
+    let message = entry.message.unwrap();
+    assert!(
+        message.contains("current sidecar is missing a field mitame reads"),
+        "{message}"
+    );
+    assert!(message.contains("scale"), "{message}");
+}
+
+#[test]
+fn older_current_sidecar_round_trips_through_update() {
+    let dir = tempfile::tempdir().unwrap();
+    let layout = Layout::new(dir.path().join(".mitame"), "default");
+    let config = Config::default();
+    write_png(
+        &layout.root.join("current/default/ios/x.png"),
+        4,
+        4,
+        [0, 0, 0, 255],
+        &[],
+    );
+    fs::write(
+        layout.root.join("current/default/ios/x.json"),
+        r#"{"schema_version":0,"id":"ios/x","image":{"width":4,"height":4,"scale":2.0},"captured_at":"t0","ext":{"ios":{"run_id":"r0"}}}"#,
+    )
+    .unwrap();
+
+    let outcome = compare(&config, &layout).unwrap();
+    assert_eq!(outcome.result.results[0].status, Status::Added);
+    update_baseline(&layout, &outcome.result, false).unwrap();
+    let baseline: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(layout.root.join("baseline/default/ios/x.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        baseline,
+        serde_json::json!({"schema_version":0,"id":"ios/x","image":{"width":4,"height":4,"scale":2.0},"ext":{"ios":{}}})
+    );
+
+    let outcome = compare(&config, &layout).unwrap();
+    assert_eq!(outcome.result.results[0].status, Status::Unchanged);
+    assert!(!outcome.errored);
 }

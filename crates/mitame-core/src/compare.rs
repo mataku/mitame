@@ -2,15 +2,14 @@ use std::fs;
 use std::path::Path;
 
 use image::RgbaImage;
-use mitame_contract::{
-    DiffBounds, Entry, Identity, ResultFile, Sidecar, Status, Summary, SCHEMA_VERSION,
-};
+use mitame_contract::{DiffBounds, Entry, Identity, ResultFile, Status, Summary, SCHEMA_VERSION};
 use rayon::prelude::*;
 
 use crate::config::{Config, EffectiveCompare, Severity};
 use crate::diff::{diff_images, DiffOptions};
 use crate::error::{Error, Result};
 use crate::layout::Layout;
+use crate::sidecar::{self, SidecarView};
 
 #[derive(Debug)]
 pub struct CompareOutcome {
@@ -91,7 +90,7 @@ fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> E
         captured_at: None,
     };
     let current_sidecar = if current.exists() {
-        match checked_sidecar("current", &layout.current_sidecar(id), id) {
+        match sidecar::read("current", &layout.current_sidecar(id), id) {
             Ok(sc) => sc,
             Err(msg) => {
                 entry.message = Some(msg);
@@ -119,7 +118,7 @@ fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> E
         }
         (true, true) => {}
     }
-    let baseline_sidecar = match checked_sidecar("baseline", &layout.baseline_sidecar(id), id) {
+    let baseline_sidecar = match sidecar::read("baseline", &layout.baseline_sidecar(id), id) {
         Ok(sc) => sc,
         Err(msg) => {
             entry.message = Some(msg);
@@ -137,21 +136,6 @@ fn compare_one(layout: &Layout, id: &Identity, effective: EffectiveCompare) -> E
     }
 }
 
-fn checked_sidecar(
-    side: &str,
-    path: &Path,
-    id: &Identity,
-) -> std::result::Result<Option<Sidecar>, String> {
-    match read_sidecar(path) {
-        Ok(Some(sc)) => match sidecar_problem(side, &sc, id) {
-            Some(msg) => Err(msg),
-            None => Ok(Some(sc)),
-        },
-        Ok(None) => Ok(None),
-        Err(e) => Err(format!("{side} sidecar is invalid: {e}")),
-    }
-}
-
 type Fill = Box<dyn FnOnce(Entry) -> Entry>;
 
 fn compare_pair(
@@ -159,7 +143,7 @@ fn compare_pair(
     id: &Identity,
     baseline: &Path,
     current: &Path,
-    sidecars: (Option<&Sidecar>, Option<&Sidecar>),
+    sidecars: (Option<&SidecarView>, Option<&SidecarView>),
     effective: EffectiveCompare,
 ) -> Result<Fill> {
     let baseline_bytes = fs::read(baseline).map_err(|e| Error::io(baseline, e))?;
@@ -243,41 +227,10 @@ fn compare_pair(
     }))
 }
 
-fn sidecar_problem(side: &str, sc: &Sidecar, id: &Identity) -> Option<String> {
-    if sc.schema_version != SCHEMA_VERSION {
-        return Some(format!(
-            "{side} sidecar has schema_version {} but this mitame {} reads schema_version {SCHEMA_VERSION}; update the binary or the adapter",
-            sc.schema_version,
-            env!("CARGO_PKG_VERSION")
-        ));
-    }
-    if sc.id != id.id() {
-        return Some(format!(
-            "{side} sidecar id `{}` does not match path identity `{}`",
-            sc.id,
-            id.id()
-        ));
-    }
-    None
-}
-
 fn decode(path: &Path, bytes: &[u8]) -> Result<RgbaImage> {
     image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
         .map(|img| img.to_rgba8())
         .map_err(|e| Error::Image {
-            path: path.to_path_buf(),
-            source: e,
-        })
-}
-
-fn read_sidecar(path: &Path) -> Result<Option<Sidecar>> {
-    if !path.exists() {
-        return Ok(None);
-    }
-    let text = fs::read_to_string(path).map_err(|e| Error::io(path, e))?;
-    serde_json::from_str(&text)
-        .map(Some)
-        .map_err(|e| Error::Json {
             path: path.to_path_buf(),
             source: e,
         })

@@ -59,7 +59,7 @@ Verify before moving on:
 
 Once the baseline is committed, delete the previous library's golden or snapshot files (`test/**/goldens/`, `__Snapshots__/`, and the like) in a commit of their own; nothing reads them any more, and leaving them invites someone to update the wrong set.
 
-Pin the adapter to the binary's version (`mitame_flutter: 0.1.0` rather than `^0.1.0` when the project does not commit `pubspec.lock`; an exact Maven or Swift package version otherwise) and bump both together. The sidecar carries a schema version, and a capture written for a schema the binary does not know is reported as `error` rather than compared.
+Pin the adapter to the binary's version (`mitame_flutter: 0.1.0` rather than `^0.1.0` when the project does not commit `pubspec.lock`; an exact Maven or Swift package version otherwise) and bump both together. The sidecar carries a schema version, and a capture written for a newer schema than the binary reads is reported as `error` rather than compared; older schemas are read.
 
 ### 6. Add the CI job
 
