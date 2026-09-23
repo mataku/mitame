@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-package_dir="$1"
+package_dir="${1:?usage: bundle-flutter-binaries.sh <package-dir>}"
 version="$(tr -d '[:space:]' < "$package_dir/binary_version")"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
