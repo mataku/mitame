@@ -4,6 +4,7 @@ Sections are keyed by version; `release.yml` publishes the section matching the 
 
 ## Unreleased
 
+- Release archives are built for `aarch64-apple-darwin`, `x86_64-unknown-linux-musl`, and `aarch64-unknown-linux-musl` only. The Intel macOS and Windows archives are no longer published, since neither can be verified during development; `cargo install` still builds from source on those platforms.
 - Sidecars written for an older `schema_version` are read instead of reported as `error`, so a future schema bump does not break committed baselines; only the fields the binary uses are checked. A sidecar for a newer `schema_version` is still an error, and it is now reported as such even when its fields were renamed, instead of as a JSON parse error.
 - `mitame compare --update` drops `captured_at` and `ext.<platform>.run_id` from the sidecars it writes into the baseline, keeping the adapter's key order, so an updated screenshot no longer rewrites its sidecar on every run. Existing baseline sidecars lose those two fields the next time their screenshot is updated; nothing needs to be regenerated.
 - A sidecar that cannot be parsed, or that names another identity or schema version, is now reported as `error` in every case. Before, an unparseable current sidecar was ignored for `added` screenshots (and copied into the baseline by `--update`), and a baseline sidecar was only checked after the byte-equality and dimension checks, so a bad baseline sidecar surfaced as `unchanged` or `mismatch`.

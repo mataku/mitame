@@ -224,10 +224,6 @@ fn open_in_browser(url: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut c = std::process::Command::new("open");
         c.arg(url);
         c
-    } else if cfg!(target_os = "windows") {
-        let mut c = std::process::Command::new("cmd");
-        c.args(["/C", "start", "", url]);
-        c
     } else {
         let mut c = std::process::Command::new("xdg-open");
         c.arg(url);

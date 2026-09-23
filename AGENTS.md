@@ -40,11 +40,11 @@ cd adapters/ios && ../../target/debug/mitame run -- xcodebuild test -scheme Mita
 - Documentation is English, one paragraph per line, never hard-wrapped. Design notes under `docs/spec/` are intentionally untracked scratch material; user-facing docs live in `README.md` and `docs/*.md`.
 - Keep `README.md` short (why, install, quick start, examples, links). Details go to `docs/`.
 - Identities are `<platform>/<group>/<name>[__<variant>]` restricted to `[a-z0-9_.-]`; adapters normalize names (CamelCase becomes snake_case, acronyms split as `swift_ui`). Keep the three normalizers equivalent.
-- Commits follow Conventional Commits with atomic scope; a change to default behavior gets a `!` and a `BREAKING CHANGE` paragraph that tells users what to regenerate.
+- Commits follow Conventional Commits with atomic scope; before 1.0 no commit gets a `!` or a `BREAKING CHANGE` paragraph, but a change to default behavior says in its body what users must regenerate.
 
 ## Releases and publishing
 
 - Releases, tags, and package publishing happen only through GitHub Actions (`release.yml` on `v*`, `publish-flutter.yml` on `flutter-v*`, `publish-android.yml` on `android-v*`; `snapshot-android.yml` by manual dispatch for `-SNAPSHOT` versions). `release.yml` also accepts `workflow_dispatch`, which builds every target without publishing; use it to verify the matrix before a tag. Never run `git tag`, `gh release`, `cargo publish`, `dart pub publish`, or Maven publishing locally.
 - A `v*` tag must match the version in `Cargo.toml` and `adapters/flutter/pubspec.yaml`, and `CHANGELOG.md` must have a `## <version>` section, which becomes the release notes; `VERSION_NAME` in `adapters/android/gradle.properties` must be that version or its `-SNAPSHOT` (it stays a snapshot between Android releases and is set to the plain version only for the `android-v*` tag, then bumped to the next `-SNAPSHOT`). Bump the files and add the section together.
-- `v0.1.0` was released on 2026-09-22 (binaries, Swift package) alongside `mitame_flutter` 0.1.0 on pub.dev; version bumps are the maintainer's call. From here on, a change to default behavior gets a `!` and a BREAKING CHANGE paragraph.
+- `v0.1.0` was released on 2026-09-22 (binaries, Swift package) alongside `mitame_flutter` 0.1.0 on pub.dev; version bumps are the maintainer's call. Before 1.0, commits carry no `!` or BREAKING CHANGE paragraph.
 - `mitame-report` (the pull request comment action) is a separate repository and is not a dependency of anything here.

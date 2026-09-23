@@ -12,8 +12,7 @@
 - [x] `mitame init` and project root discovery from subdirectories
 - [x] `mitame review [id]` opens the report in the browser
 - [x] sidecar `schema_version` check and `mitame_version` in `result.json`
-- [x] prebuilt binaries on GitHub Releases (`v0.1.0`, five targets) and a Homebrew tap (`mataku/tap/mitame`)
-- [ ] Windows builds (in the release matrix, never run; `capture` and `run` spawn without a shell, so `.bat` launchers must be named explicitly)
+- [x] prebuilt binaries on GitHub Releases and a Homebrew tap (`mataku/tap/mitame`); `v0.1.0` shipped five targets, later releases build macOS arm64 and Linux x64/arm64 only, since Intel macOS and Windows cannot be verified during development
 - [ ] warn when the baseline and current sidecars disagree on `env.os` while `fonts = "real"` on Flutter, the silent failure of comparing real-font captures against the wrong profile; Ahem and Robolectric baselines are shared across macOS and Linux on purpose, so the warning must not fire for them
 - [x] `diff_bounds` in `result.json` records the differing region's bounding box (the diff image already outlines it) so an agent can crop instead of reading a full-size screenshot
 - [ ] `compare --update --from <dir>` to apply a downloaded CI capture (for example the `linux` profile's `current/` from an artifact) to the local baseline, so the CI profile has an update path without the binary touching the network
