@@ -1,4 +1,4 @@
-## Unreleased
+## 0.2.0
 
 - `dart run mitame_flutter:mitame` runs the mitame binary bundled with the package (macOS arm64, Linux x64 and arm64), so a Flutter project needs no separate install. `MITAME_BINARY` points it at another binary.
 
