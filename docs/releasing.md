@@ -4,6 +4,8 @@ Releases are cut by GitHub Actions only. A `v<version>` tag builds the binaries 
 
 The first `flutter-v<version>` tag that ships the `dart run mitame_flutter:mitame` launcher must set `adapters/flutter/binary_version` to a `v<version>` release newer than 0.1.0, since 0.1.0 ignores `[capture] fonts` and never sets `MITAME_FONTS`; bundling anything older leaves launcher users with no way to get the font handling documented in `references/ci.md` and `docs/ci.md`.
 
+The Homebrew formula lives in the separate `mataku/homebrew-tap` repository and is bumped by hand after a `v<version>` release: set each `url` to the new tag and each `sha256` to the value in the matching `.sha256` asset. `v0.1.0` was the last release with an `x86_64-apple-darwin` archive, so the first bump after it also removes the `on_intel` block under `on_macos`.
+
 ## Development
 
 ```sh
