@@ -4,6 +4,7 @@ Sections are keyed by version; `release.yml` publishes the section matching the 
 
 ## Unreleased
 
+- Release binaries are about a third smaller (1.45 MB instead of 2.33 MB on macOS arm64): the release profile optimizes for size with `opt-level = "z"` and `panic = "abort"`, while the PNG decoding and diff crates keep `opt-level = 3`, so a 120-screenshot comparison takes 0.29 s instead of 0.25 s with byte-identical results. A panic now aborts the process (exit status 134) instead of unwinding (exit code 101).
 - `mitame_flutter` bundles the binary and runs it through `dart run mitame_flutter:mitame`, so Flutter projects need no separate install; see `adapters/flutter/CHANGELOG.md`.
 - Release archives are built for `aarch64-apple-darwin`, `x86_64-unknown-linux-musl`, and `aarch64-unknown-linux-musl` only. The Intel macOS and Windows archives are no longer published, since neither can be verified during development; `cargo install` still builds from source on those platforms.
 - Sidecars written for an older `schema_version` are read instead of reported as `error`, so a future schema bump does not break committed baselines; only the fields the binary uses are checked. A sidecar for a newer `schema_version` is still an error, and it is now reported as such even when its fields were renamed, instead of as a JSON parse error.

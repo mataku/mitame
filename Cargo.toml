@@ -15,6 +15,29 @@ schemars = "0.8"
 thiserror = "1"
 
 [profile.release]
+opt-level = "z"
+panic = "abort"
 lto = true
 codegen-units = 1
 strip = "none"
+
+[profile.release.package.image]
+opt-level = 3
+
+[profile.release.package.png]
+opt-level = 3
+
+[profile.release.package.fdeflate]
+opt-level = 3
+
+[profile.release.package.miniz_oxide]
+opt-level = 3
+
+[profile.release.package.simd-adler32]
+opt-level = 3
+
+[profile.release.package.crc32fast]
+opt-level = 3
+
+[profile.release.package.mitame-core]
+opt-level = 3
